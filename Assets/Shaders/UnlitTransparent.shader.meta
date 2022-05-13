@@ -3,6 +3,7 @@ guid: d5149647fbc08c545b50ab9268d5d58f
 ShaderImporter:
   externalObjects: {}
   defaultTextures: []
+  nonModifiableTextures: []
   userData: 
-  assetBundleName: shader
-  assetBundleVariant: 
+  assetBundleName: xen
+  assetBundleVariant: newhorizons
