@@ -1,7 +1,8 @@
 ﻿Shader "SphereTextureWrapper" {
 	Properties {
 		_MainTex ("Albedo (RGB)", 2D) = "white" {}
-		[HDR] _EmissionColor("Emission Color", Color) = (0,0,0)
+		_EmissionMap("Emission Map", 2D) = "black" {}
+		[HDR] _EmissionColor("Emission Color", Color) = (1,1,1)
 	}
 	SubShader {
 		Tags { "RenderType"="Opaque" }
@@ -12,10 +13,12 @@
 		#pragma target 3.0
 
 		sampler2D _MainTex;
+		sampler2D _EmissionMap;
 		fixed4 _EmissionColor;
 
 		struct Input {
 			float2 uv_MainTex;
+			float2 uv_EmissionMap;
 			float3 worldPos;
 		};
 
@@ -39,7 +42,7 @@
 
 			o.Alpha = c.a;
 
-			o.Emission = c * _EmissionColor;
+			o.Emission = tex2D(_EmissionMap, float2(i, j)) * _EmissionColor;
 		}
 		ENDCG
 	}
