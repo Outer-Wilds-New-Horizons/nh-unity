@@ -1,6 +1,7 @@
 ﻿Shader "SphereTextureWrapper" {
 	Properties {
 		_MainTex ("Albedo (RGB)", 2D) = "white" {}
+		[HDR] _EmissionColor("Emission Color", Color) = (0,0,0)
 	}
 	SubShader {
 		Tags { "RenderType"="Opaque" }
@@ -11,6 +12,7 @@
 		#pragma target 3.0
 
 		sampler2D _MainTex;
+		fixed4 _EmissionColor;
 
 		struct Input {
 			float2 uv_MainTex;
@@ -36,6 +38,8 @@
 			o.Albedo.rgb = c;
 
 			o.Alpha = c.a;
+
+			o.Emission = c * _EmissionColor;
 		}
 		ENDCG
 	}
