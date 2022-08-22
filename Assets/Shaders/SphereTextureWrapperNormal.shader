@@ -3,7 +3,9 @@
 		_MainTex ("Albedo (RGB)", 2D) = "white" {}
 		_EmissionMap("Emission Map", 2D) = "black" {}
 		[HDR] _EmissionColor("Emission Color", Color) = (1,1,1)
+
 		[Normal] _BumpMap ("Normal Map", 2D) = "bump" {}
+		_BumpScale("Normal Map Scale", Float) = 1.0
 	}
 	SubShader {
 		Tags { "RenderType"="Opaque" }
@@ -17,6 +19,7 @@
 		sampler2D _EmissionMap;
 		fixed4 _EmissionColor;
 		sampler2D _BumpMap;
+		half _BumpScale;
 
 		struct Input {
 			float2 uv_MainTex;
@@ -47,7 +50,7 @@
 
 			o.Emission = tex2D(_EmissionMap, float2(i, j)) * _EmissionColor;
 
-			o.Normal = UnpackNormal (tex2D (_BumpMap, float2(i, j)));
+			o.Normal = UnpackScaleNormal (tex2D (_BumpMap, float2(i, j)), _BumpScale);
 		}
 		ENDCG
 	}
