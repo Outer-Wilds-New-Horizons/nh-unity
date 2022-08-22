@@ -4,7 +4,12 @@
 		_InnerRadius("InnerRadius", Range(0,1)) = 0.0
 	}
 	SubShader {
-		Tags { "RenderType"="Opaque" "Queue"="Transparent" }
+		Tags
+		{
+			"Queue"="Opaque"
+			"RenderType"="Transparent"
+			"PreviewType"="Plane"
+		}
 		LOD 100
 		Blend SrcAlpha OneMinusSrcAlpha
 		Pass {

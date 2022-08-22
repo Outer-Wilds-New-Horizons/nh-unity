@@ -3,7 +3,12 @@
 		_MainTex ("Base (RGB)", 2D) = "white" {}
 	}
 	SubShader {
-		Tags { "RenderType"="Opaque" "Queue"="Transparent" }
+		Tags
+		{
+			"Queue"="Opaque"
+			"RenderType"="Transparent"
+			"PreviewType"="Plane"
+		}
 		LOD 100
 		Blend SrcAlpha OneMinusSrcAlpha
 		Pass {

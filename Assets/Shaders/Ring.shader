@@ -13,7 +13,11 @@ Shader "NewHorizons/Ring"
     }
     SubShader
     {
-        Tags {"Queue"="AlphaTest" }
+        Tags
+        {
+            "Queue"="AlphaTest"
+            "PreviewType"="Plane"
+        }
         Pass
         {
             Tags {"LightMode" = "ForwardBase" }
