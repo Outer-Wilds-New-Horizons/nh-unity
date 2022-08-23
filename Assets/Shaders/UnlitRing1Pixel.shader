@@ -2,6 +2,7 @@
 	Properties {
 		_MainTex ("Base (RGB)", 2D) = "white" {}
 		_InnerRadius("InnerRadius", Range(0,1)) = 0.0
+		_Alpha ("Alpha", range(0.0, 1.0)) = 1.0
 	}
 	SubShader {
 		Tags
@@ -31,6 +32,7 @@
 				sampler2D _MainTex;
 				float4 _MainTex_ST;
 				float _InnerRadius;
+				float _Alpha;
 				v2f vert (appdata_t v)
 				{
 					v2f o;
@@ -55,6 +57,8 @@
 					{
 						col = tex2D(_MainTex, float2(0, r_sample));
 					}
+
+					col.a = col.a * _Alpha;
 
 					UNITY_APPLY_FOG(i.fogCoord, col);
 

@@ -1,6 +1,7 @@
 ﻿Shader "NewHorizons/UnlitTransparent" {
 	Properties {
 		_MainTex ("Base (RGB)", 2D) = "white" {}
+		_Alpha ("Alpha", range(0.0, 1.0)) = 1.0
 	}
 	SubShader {
 		Tags
@@ -29,6 +30,7 @@
 				};
 				sampler2D _MainTex;
 				float4 _MainTex_ST;
+				float _Alpha;
 				v2f vert (appdata_t v)
 				{
 					v2f o;
@@ -42,6 +44,7 @@
 				fixed4 frag (v2f i) : SV_Target
 				{
 					fixed4 col = tex2D(_MainTex, i.texcoord);
+					col.a = col.a * _Alpha;
 					UNITY_APPLY_FOG(i.fogCoord, col);
 					return col;
 				}

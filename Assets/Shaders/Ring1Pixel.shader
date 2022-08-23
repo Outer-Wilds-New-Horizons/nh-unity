@@ -3,9 +3,10 @@
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
-		_Color ("Tint", Color) = (1,1,1,1)
+        _Color ("Tint", Color) = (1,1,1,1)
         _Cutoff("Alpha Cutoff", Range(0,1)) = 0.0
-		_InnerRadius("InnerRadius", Range(0,1)) = 0.0
+        _InnerRadius("InnerRadius", Range(0,1)) = 0.0
+        _Alpha ("Alpha", range(0.0, 1.0)) = 1.0
     }
  
     SubShader
@@ -32,6 +33,7 @@
         fixed4 _Color;
 		fixed3 _SunPosition;
 		float _InnerRadius;
+		float _Alpha;
  
         struct Input
         {
@@ -70,7 +72,7 @@
 			{
 				fixed4 c = tex2D(_MainTex, float2(0, r_sample)) * _Color;
 			    o.Albedo = c.rgb;
-				o.Alpha = c.a;
+				o.Alpha = c.a * _Alpha;
 			}
 			else 
 			{
