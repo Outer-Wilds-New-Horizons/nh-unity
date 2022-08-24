@@ -7,8 +7,8 @@
 	SubShader {
 		Tags
 		{
-			"Queue"="Opaque"
-			"RenderType"="Transparent"
+			"RenderType"="Opaque"
+			"Queue"="Transparent"
 			"PreviewType"="Plane"
 		}
 		LOD 100
