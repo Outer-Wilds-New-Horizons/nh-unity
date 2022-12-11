@@ -26,16 +26,12 @@ public static class NomaiTextArcBuilder {
     var gameObject = new GameObject("spiral holder");
     spiralMeshHolder = gameObject;
 
-    var rootArc = new SpiralTextArc();
-    rootArc.MakeChild();
-    spiralMesh = rootArc.m.children[0];
-    spiralMesh.updateChildren();
+    // var rootArc = new SpiralTextArc();
+    // rootArc.MakeChild();
+    // spiralMesh = rootArc.m.children[0];
+    // spiralMesh.updateChildren();
 
-    // // add a sphere at each skeleton point
-    //spiralMesh.skeleton.ForEach(point => {
-    //    var go = AddDebugShape.AddSphere(gameObject, 0.02f, Color.green);
-    //    go.transform.localPosition = new Vector3(point.x, 0, point.y);
-    //});
+    var rootArc = new SpiralTextArc();
   }
 
   public static void RotatePlus()
@@ -69,6 +65,7 @@ public static class NomaiTextArcBuilder {
       g.AddComponent<MeshFilter>().sharedMesh = m.mesh;
       g.AddComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Sprites/Default"));
       g.GetComponent<MeshRenderer>().sharedMaterial.color = Color.magenta;
+      g.AddComponent<NHNomaiTextLine>().SetModel(m);
 
       // (float arcLen, float offsetX, float offsetY, float offsetAngle, bool mirror, float scale, float a, float b, float startS)
       GameObject p = AddDebugShape.AddSphere(g, 0.05f, Color.green);
@@ -82,6 +79,59 @@ public static class NomaiTextArcBuilder {
       s.m.startSOnParent = UnityEngine.Random.Range(50, 250);
       m.addChild(s.m);
       return s;
+    }
+  }
+
+  public class NHNomaiTextLine : MonoBehaviour {
+    List<Vector3> _points;
+    List<float> normalAngles;
+
+    public void SetModel(SpiralMesh model) {
+      //
+      // rotate to face up
+      //
+      
+      var norm = model.skeleton[1] - model.skeleton[0];
+      float r = Mathf.Atan2(-norm.y, norm.x) * Mathf.Rad2Deg;
+      if (model.mirror) r += 180;
+      transform.localEulerAngles = model.mirror
+        ? new Vector3(0, 90-r, 0)
+        : new Vector3(0, -90-r, 0);
+      // var ang = model.mirror ? 90-r : -90-r;
+      //model.ang = 180-r;
+      //model.updateMesh();
+
+      //
+      // casche important stuff
+      //
+
+      this._points = model.skeleton.Select((compiled) => new Vector3(compiled.x, 0, compiled.y)).ToList();
+
+      normalAngles = new List<float>();
+      for (int i = 0; i<model.numSkeletonPoints; i++) {
+        var normal = _points[Mathf.Min(i+1, model.numSkeletonPoints-1)] - _points[Mathf.Max(i-1, 0)];
+
+        float rot = Mathf.Atan2(-normal.z, normal.x) * Mathf.Rad2Deg;
+        if (model.mirror) rot += 180;
+
+        normalAngles.Add(rot);
+      }
+      
+      //
+      // debug
+      //
+
+      for (int i = 0; i<model.numSkeletonPoints; i++) {
+        GameObject j = AddDebugShape.AddSphere(this.gameObject, 0.05f, Color.green);
+        j.transform.localPosition = _points[i];
+      }
+      
+      for (int i = 0; i<model.numSkeletonPoints; i++) {
+        GameObject s = AddDebugShape.AddStick(this.gameObject, Color.blue);
+        s.transform.localPosition = _points[i];
+        s.transform.localEulerAngles = new Vector3(0, normalAngles[i], 0);
+        s.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+      }
     }
   }
 
@@ -130,6 +180,7 @@ public static class NomaiTextArcBuilder {
     public new List<SpiralMesh> children = new List<SpiralMesh>();
 
     public List<Vector3> skeleton;
+    public List<Vector2> skeletonOutsidePoints;
 
     public int numSkeletonPoints = 51; // seems to be Mobius' default
 
@@ -158,6 +209,8 @@ public static class NomaiTextArcBuilder {
 
     internal void updateMesh() {
       skeleton = this.getSkeleton(numSkeletonPoints);
+      skeletonOutsidePoints = this.getSkeletonOutsidePoints(numSkeletonPoints);
+      
       List<Vector3> vertsSide1 = skeleton.Select((skeletonPoint, index) => {
         Vector3 normal = new Vector3(cos(skeletonPoint.z), 0, sin(skeletonPoint.z));
         float width = lerp(((float) index) / ((float) skeleton.Count()), outerWidth, innerWidth);
@@ -372,6 +425,34 @@ public static class NomaiTextArcBuilder {
       return skeleton;
     }
 
+    public List<Vector2> getSkeletonOutsidePoints(int numPoints) {
+      var endT = tFromArcLen(endS);
+      var startT = tFromArcLen(startS);
+      var rangeT = endT - startT;
+
+      List<Vector2> outsidePoints = new List<Vector2>();
+      for (int i = 0; i<numPoints; i++) {
+        float fraction = ((float) i) / ((float) numPoints - 1f); // casting is so uuuuuuuugly
+
+        // note: cutting the sprial into numPoints equal slices of arclen would
+        // provide evenly spaced skeleton points
+        // on the other hand, cutting the spiral into numPoints equal slices of t
+        // will cluster points in areas of higher detail. this is the way Mobius does it, so it is the way we also will do it
+        float inputT = startT + rangeT * fraction;
+        float inputS = tToArcLen(inputT);
+
+        var point = (getDrawnSpiralPointAndNormal(inputS));
+
+        
+        var deriv = spiralDerivative(inputT);
+        var outsidePoint = new Vector2(point.x, point.y) - (new Vector2(-deriv.y, deriv.x)).normalized * 0.1f;
+        outsidePoints.Add(outsidePoint);
+      }
+
+      outsidePoints.Reverse();
+      return outsidePoints;
+    }
+
     // all of this math is based off of this:
     // https://www.desmos.com/calculator/9gdfgyuzf6
     //
@@ -425,7 +506,7 @@ public static class NomaiTextArcBuilder {
     }
 
     // the base formula for the spiral
-    protected Vector2 spiralPoint(float t) {
+    public Vector2 spiralPoint(float t) {
       var r = a * exp(b * t);
       var retval = new Vector2(r * cos(t), r * sin(t));
       return retval;
@@ -433,7 +514,7 @@ public static class NomaiTextArcBuilder {
 
     // the spiral's got two functions: x(t) and y(t)
     // so it's got two derrivatives (with respect to t) x'(t) and y'(t)
-    protected Vector2 spiralDerivative(float t) { // derrivative with respect to t
+    public Vector2 spiralDerivative(float t) { // derrivative with respect to t
       var r = a * exp(b * t);
       return new Vector2(
         -r * (sin(t) - b * cos(t)),
@@ -442,17 +523,17 @@ public static class NomaiTextArcBuilder {
     }
 
     // returns the length of the spiral between t0 and t1
-    protected float spiralArcLength(float t0, float t1) {
+    public float spiralArcLength(float t0, float t1) {
       return (a / b) * sqrt(b * b + 1) * (exp(b * t1) - exp(b * t0));
     }
 
     // converts from a value of t to the equivalent value of s (the value of s that corresponds to the same point on the spiral as t)
-    protected float tToArcLen(float t) {
+    public float tToArcLen(float t) {
       return spiralArcLength(0, t);
     }
 
     // reverse of above
-    protected float tFromArcLen(float s) {
+    public float tFromArcLen(float s) {
       return ln(
         1 + s / (
           (a / b) *
@@ -462,7 +543,7 @@ public static class NomaiTextArcBuilder {
     }
 
     // returns the angle of the spiral's normal at a given point
-    protected float normalAngle(float t) {
+    public float normalAngle(float t) {
       var d = spiralDerivative(t);
       var n = new Vector2(d.y, -d.x);
       var angle = Mathf.Atan2(n.y, n.x);
@@ -492,29 +573,76 @@ public static class NomaiTextArcBuilder {
     return Mathf.Log(t);
   }
 
-    public static class AddDebugShape
+  public static class AddDebugShape
+  {
+    public static GameObject AddSphere(GameObject obj, float radius, Color color)
     {
-        public static GameObject AddSphere(GameObject obj, float radius, Color color)
-        {
-            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            sphere.transform.name = "DebugSphere";
+      var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+      sphere.transform.name = "DebugSphere";
 
-            try
-            {
-                sphere.GetComponent<SphereCollider>().enabled = false;
-                sphere.transform.parent = obj.transform;
-                sphere.transform.localScale = new Vector3(radius, radius, radius);
+      try
+      {
+        sphere.GetComponent<SphereCollider>().enabled = false;
+        sphere.transform.parent = obj.transform;
+        sphere.transform.localScale = new Vector3(radius, radius, radius);
 
-                sphere.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Sprites/Default"));
-                sphere.GetComponent<MeshRenderer>().sharedMaterial.color = color;
-            }
-            catch
-            {
-                // Something went wrong so make sure the sphere is deleted
-                GameObject.Destroy(sphere);
-            }
+        sphere.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Sprites/Default"));
+        sphere.GetComponent<MeshRenderer>().sharedMaterial.color = color;
+      }
+      catch
+      {
+        // Something went wrong so make sure the sphere is deleted
+        GameObject.Destroy(sphere);
+      }
 
-            return sphere.gameObject;
-        }
+      return sphere.gameObject;
     }
+  
+    public static GameObject AddStick(GameObject obj,  Color color)
+    {
+      var width = 0.1f;
+      var length = 0.5f;
+
+      var newVerts = new Vector3[] {
+        new Vector3(-width/2f, 0, 0),
+        new Vector3(width/2f, 0, 0),
+        new Vector3(-width/2f, 0, length),
+        new Vector3(width/2f, 0, length),
+      };
+
+      /*
+        2 *-----* 3                  
+          |⟍    |                   
+          |  ⟍  |        
+          |    ⟍|                   
+        0 *-----* 1       
+        */
+      var triangles = new List<int>();
+      triangles.Add(0 + 2);
+      triangles.Add(0 + 1);
+      triangles.Add(0);
+
+      triangles.Add(0 + 2);
+      triangles.Add(0 + 3);
+      triangles.Add(0 + 1);
+
+      Vector3[] normals = new Vector3[newVerts.Length];
+      for (int i = 0; i<newVerts.Length; i++) normals[i] = new Vector3(0, 1, 0);
+
+      var mesh = new Mesh();
+      mesh.vertices = newVerts;
+      mesh.triangles = triangles.ToArray();
+      mesh.normals = normals;
+      mesh.RecalculateBounds();
+
+      var g = new GameObject();
+      g.AddComponent<MeshFilter>().sharedMesh = mesh;
+      g.AddComponent<MeshRenderer>();
+      g.transform.parent = obj.transform;
+      g.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Sprites/Default"));
+      g.GetComponent<MeshRenderer>().sharedMaterial.color = color;
+
+      return g;
+    }
+  }
 }
