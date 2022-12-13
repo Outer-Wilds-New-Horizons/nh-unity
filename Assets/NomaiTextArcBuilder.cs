@@ -88,24 +88,31 @@ public static class NomaiTextArcBuilder {
 
     public void SetModel(SpiralMesh model) {
       //
-      // rotate to face up
+      // rotate mesh to face up
       //
       
       var norm = model.skeleton[1] - model.skeleton[0];
       float r = Mathf.Atan2(-norm.y, norm.x) * Mathf.Rad2Deg;
       if (model.mirror) r += 180;
-      transform.localEulerAngles = model.mirror
-        ? new Vector3(0, 90-r, 0)
-        : new Vector3(0, -90-r, 0);
-      // var ang = model.mirror ? 90-r : -90-r;
-      //model.ang = 180-r;
-      //model.updateMesh();
+      var ang = model.mirror ? 90-r : -90-r;
+
+      // using model.mesh causes old meshes to disappear for some reason, idk why
+      var meshCopy = this.GetComponent<MeshFilter>().mesh;
+      var newVerts = meshCopy.vertices.Select(v => Quaternion.Euler(0, ang, 0) * v).ToArray();
+      meshCopy.vertices = newVerts;
+      meshCopy.RecalculateBounds();
+
+
 
       //
       // casche important stuff
       //
 
-      this._points = model.skeleton.Select((compiled) => new Vector3(compiled.x, 0, compiled.y)).ToList();
+      this._points = model.skeleton
+        .Select((compiled) => 
+          Quaternion.Euler(0, ang, 0) * (new Vector3(compiled.x, 0, compiled.y))
+        )
+        .ToList();
 
       normalAngles = new List<float>();
       for (int i = 0; i<model.numSkeletonPoints; i++) {
@@ -132,6 +139,19 @@ public static class NomaiTextArcBuilder {
         s.transform.localEulerAngles = new Vector3(0, normalAngles[i], 0);
         s.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
       }
+
+      //
+      // set up NomaiTextArc stuff
+      //
+
+      // base._lengths = ...
+      // base._points = _points
+      // base._totalLength = 
+      // base._state = NomaiTextLine.VisualState.UNREAD;
+      // base._textLineLocation = NomaiText.Location.UNSPECIFIED;
+      // base._center = average of all points
+      // base._radius = max distance from a point to center
+      // base._active = true
     }
   }
 
