@@ -6,15 +6,14 @@ using UnityEngine;
 [ExecuteInEditMode]
 public class NomaiTextArcArranger : MonoBehaviour {
   public List<SpiralManipulator> spirals = new List<SpiralManipulator>();
-  private HashSet<int> spiralsThatHaveBeenMirrored = new HashSet<int>();
   private Dictionary<int, int> sprialOverlapResolutionPriority = new Dictionary<int, int>();
+
+  private static int MAX_MOVE_DISTANCE = 2;
 
   public float maxX = 4;
   public float minX = -4;
   public float maxY = 5f;
   public float minY = -1f;
-
-  public int SPIRAL_OF_INTEREST = 6;
 
   public static SpiralManipulator Place(GameObject spiralMeshHolder = null) {
     if (spiralMeshHolder == null) 
@@ -48,16 +47,16 @@ public class NomaiTextArcArranger : MonoBehaviour {
 
   public int AttemptOverlapResolution(Vector2Int overlappingSpirals) 
   {
-      if (!sprialOverlapResolutionPriority.ContainsKey(overlappingSpirals.x)) sprialOverlapResolutionPriority[overlappingSpirals.x] = 0;
-      if (!sprialOverlapResolutionPriority.ContainsKey(overlappingSpirals.y)) sprialOverlapResolutionPriority[overlappingSpirals.y] = 0;
+    if (!sprialOverlapResolutionPriority.ContainsKey(overlappingSpirals.x)) sprialOverlapResolutionPriority[overlappingSpirals.x] = 0;
+    if (!sprialOverlapResolutionPriority.ContainsKey(overlappingSpirals.y)) sprialOverlapResolutionPriority[overlappingSpirals.y] = 0;
 
-      int mirrorIndex = overlappingSpirals.x;
-      if (sprialOverlapResolutionPriority[overlappingSpirals.y] > sprialOverlapResolutionPriority[overlappingSpirals.x]) mirrorIndex = overlappingSpirals.y;
+    int mirrorIndex = overlappingSpirals.x;
+    if (sprialOverlapResolutionPriority[overlappingSpirals.y] > sprialOverlapResolutionPriority[overlappingSpirals.x]) mirrorIndex = overlappingSpirals.y;
 
-      this.spirals[mirrorIndex].Mirror();
-      sprialOverlapResolutionPriority[mirrorIndex]--;
+    this.spirals[mirrorIndex].Mirror();
+    sprialOverlapResolutionPriority[mirrorIndex]--;
 
-      return mirrorIndex;
+    return mirrorIndex;
   }
 
   public Vector2Int Overlap() 
@@ -73,9 +72,6 @@ public class NomaiTextArcArranger : MonoBehaviour {
       {
         jndex++;
         if (s1 == s2) continue;
-        //if (s1.parent == s2) continue;
-        //if (s1 == s2.parent) continue;
-
         if (Vector3.Distance(s1.center, s2.center) > Mathf.Max(s1.NomaiTextLine.GetWorldRadius(), s2.NomaiTextLine.GetWorldRadius())) continue; // no overlap possible - too far away
 
         var s1Points = s1.NomaiTextLine.GetPoints().Select(p => s1.transform.TransformPoint(p)).ToList();
@@ -113,6 +109,10 @@ public class NomaiTextArcArranger : MonoBehaviour {
       index++;
       if (s1.parent == null) continue;
 
+      //
+      // Calculate the force s1 should experience
+      //
+
       Vector2 force = Vector2.zero;
       foreach (var s2 in spirals) 
       {
@@ -126,16 +126,6 @@ public class NomaiTextArcArranger : MonoBehaviour {
 
         var f2 = (s2.localPosition - s1.localPosition);
         force -= f2 / Mathf.Pow(f2.magnitude, 6);
-
-        //// account for spirals that get locked together (this happens when a mirrored spiral and non-mirrored spiral are close enough together that one spiral has its base to the left of the other's base and its center to the right of the other's center)
-        //if (Vector2.Angle(f, f2) > 90) 
-        //{
-        //  s1.transform.localScale = new Vector3(-s1.transform.localScale.x, 1, 1);
-        //  force = Vector2.zero;
-        //  break;
-        //}
-        
-        if (index == SPIRAL_OF_INTEREST) Debug.DrawLine(s2.center, s1.center);
       }
       
       
@@ -183,7 +173,6 @@ public class NomaiTextArcArranger : MonoBehaviour {
       // limit the distance a spiral can move in a single step
       //
 
-      var MAX_MOVE_DISTANCE = 2;
       bestPointIndex = spiral._parentPointIndex + Mathf.Min(MAX_MOVE_DISTANCE, Mathf.Max(-MAX_MOVE_DISTANCE, bestPointIndex - spiral._parentPointIndex)); // minimize step size to help stability
       
       //
