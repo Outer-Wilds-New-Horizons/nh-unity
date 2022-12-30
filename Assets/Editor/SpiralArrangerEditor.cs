@@ -28,11 +28,17 @@ public class SpiralArrangerEditor : Editor
 
         if (GUILayout.Button("Attempt to fix overlap"))
         {
-            var overlap = myTarget.Overlap();
-            if (overlap.x < 0) return;
+            for (var k = 0; k < myTarget.spirals.Count*2; k++) 
+            {
+                var overlap = myTarget.Overlap();
+                if (overlap.x < 0) return;
 
-            var success = myTarget.AttemptOverlapResolution(overlap);
-            for(var i = 0; i < 10; i++) myTarget.Step();
+                var indexMirrored = myTarget.AttemptOverlapResolution(overlap);
+                Debug.Log("Mirrored spiral " + indexMirrored);
+                for(var i = 0; i < 10; i++) myTarget.Step();
+            }
+
+            Debug.Log("Overlap resolution failed!");
         }
     }
 }
