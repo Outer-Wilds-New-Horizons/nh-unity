@@ -60,28 +60,14 @@ public static class NomaiTextArcBuilder {
     NomaiTextArcBuilder.i++;
 
     //
-    // cache important stuff
+    // set up NomaiTextArc stuff
     //
-
+    
     var _points = m.skeleton
       .Select((compiled) => 
         Quaternion.Euler(-90, 0, 0) * Quaternion.Euler(0, ang, 0) * (new Vector3(compiled.x, 0, compiled.y)) // decompile them, rotate them by ang, and then rotate them to be vertical, like the base game spirals are
       )
       .ToList();
-
-    var normalAngles = new List<float>();
-    for (int i = 0; i<m.numSkeletonPoints; i++) {
-      var normal = _points[Mathf.Min(i+1, m.numSkeletonPoints-1)] - _points[Mathf.Max(i-1, 0)];
-
-      float rot = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg - 90;
-      if (m.mirror) rot += 180;
-
-      normalAngles.Add(rot);
-    }
-    
-    //
-    // set up NomaiTextArc stuff
-    //
 
     var _lengths = _points.Take(_points.Count()-1).Select((point, i) => Vector3.Distance(point, _points[i+1])).ToArray();
     var _totalLength = _lengths.Aggregate(0f, (acc, length) => acc + length);
@@ -119,8 +105,8 @@ public static class NomaiTextArcBuilder {
     public Vector2 skeletonScale;
     public int numSkeletonPoints;
     public float uvScale;
-    public float innerWidth;
-    public float outerWidth;
+    public float innerWidth; // width at the tip
+    public float outerWidth; // width at the base
     public Material material;
   }
   
@@ -133,8 +119,8 @@ public static class NomaiTextArcBuilder {
     skeletonScale = new Vector2(0.01f, 0.01f),
     numSkeletonPoints = 51,
 
-    innerWidth = 0.001f, // width at the tip
-    outerWidth = 0.05f, // width at the base
+    innerWidth = 0.001f, 
+    outerWidth = 0.05f, 
     uvScale = 4.9f,
   };
 
@@ -147,8 +133,8 @@ public static class NomaiTextArcBuilder {
     skeletonScale = new Vector2(0.002f, 0.005f),
     numSkeletonPoints = 51,
 
-    innerWidth = 0.001f/10f, // width at the tip
-    outerWidth = 2f*0.05f,  // width at the base
+    innerWidth = 0.001f/10f, 
+    outerWidth = 2f*0.05f, 
     uvScale = 4.9f/3.5f, 
   };
 
@@ -348,34 +334,44 @@ public static class NomaiTextArcBuilder {
 
     // note: each Vector3 in this list is of form <x, y, angle in radians of the normal at this point>
     public List<Vector3> getSkeleton(int numPoints) {
-      var endT = tFromArcLen(endS);
-      var startT = tFromArcLen(startS);
-      var rangeT = endT - startT;
+      var skeleton =
+        WalkAlongSpiral(numPoints)
+        .Select(input => {
+          float inputS = input.y;
+          var skeletonPoint = getDrawnSpiralPointAndNormal(inputS);
+          return skeletonPoint;
+        })
+        .Reverse()
+        .ToList();
 
-      List<Vector3> skeleton = new List<Vector3>();
-      for (int i = 0; i<numPoints; i++) {
-        float fraction = ((float) i) / ((float) numPoints - 1f); // casting is so uuuuuuuugly
-
-        // note: cutting the sprial into numPoints equal slices of arclen would
-        // provide evenly spaced skeleton points
-        // on the other hand, cutting the spiral into numPoints equal slices of t
-        // will cluster points in areas of higher detail. this is the way Mobius does it, so it is the way we also will do it
-        float inputT = startT + rangeT * fraction;
-        float inputS = tToArcLen(inputT);
-
-        skeleton.Add(getDrawnSpiralPointAndNormal(inputS));
-      }
-
-      skeleton.Reverse();
       return skeleton;
     }
-
+    
     public List<Vector2> getSkeletonOutsidePoints(int numPoints) {
+      var outsidePoints =
+        WalkAlongSpiral(numPoints)
+        .Select(input => {
+          float inputT = input.x;
+          float inputS = input.y;
+
+          var skeletonPoint = getDrawnSpiralPointAndNormal(inputS);
+
+          var deriv = spiralDerivative(inputT);
+          var outsidePoint = new Vector2(skeletonPoint.x, skeletonPoint.y) - (new Vector2(-deriv.y, deriv.x)).normalized * 0.1f;
+          return outsidePoint;
+        })
+        .Reverse()
+        .ToList();
+
+      return outsidePoints;
+    }
+    
+    // generate a list of <inputT, inputS> evenly distributed over the whole spiral. `numPoints` number of <inputT, inputS> pairs are generated
+    public IEnumerable<Vector2> WalkAlongSpiral(int numPoints) {
       var endT = tFromArcLen(endS);
       var startT = tFromArcLen(startS);
       var rangeT = endT - startT;
 
-      List<Vector2> outsidePoints = new List<Vector2>();
       for (int i = 0; i<numPoints; i++) {
         float fraction = ((float) i) / ((float) numPoints - 1f); // casting is so uuuuuuuugly
 
@@ -386,16 +382,8 @@ public static class NomaiTextArcBuilder {
         float inputT = startT + rangeT * fraction;
         float inputS = tToArcLen(inputT);
 
-        var point = (getDrawnSpiralPointAndNormal(inputS));
-
-        
-        var deriv = spiralDerivative(inputT);
-        var outsidePoint = new Vector2(point.x, point.y) - (new Vector2(-deriv.y, deriv.x)).normalized * 0.1f;
-        outsidePoints.Add(outsidePoint);
+        yield return new Vector2(inputT, inputS);
       }
-
-      outsidePoints.Reverse();
-      return outsidePoints;
     }
 
     // all of this math is based off of this:
