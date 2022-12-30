@@ -14,16 +14,13 @@ public class SpiralManipulatorInspector : Editor
         if (newPoint != myTarget._parentPointIndex) 
         {
             myTarget._parentPointIndex = newPoint;
-            SpiralManipulator.PlaceChildOnParentPoint(myTarget.gameObject, myTarget.parent.gameObject, newPoint);
+            SpiralManipulator.PlaceChildOnParentPoint(myTarget, myTarget.parent, newPoint);
         }
         
         if (GUILayout.Button("Mirror"))
         {
             myTarget.Mirror();
-            foreach(var child in myTarget.children) 
-            {
-                SpiralManipulator.PlaceChildOnParentPoint(child.gameObject, myTarget.gameObject, child._parentPointIndex);
-            }
+            myTarget.UpdateChildren();
         }
 
         if (GUILayout.Button("Add Child"))

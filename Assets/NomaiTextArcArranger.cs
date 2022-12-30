@@ -16,7 +16,7 @@ public class NomaiTextArcArranger : MonoBehaviour {
 
   public int SPIRAL_OF_INTEREST = 6;
 
-  public static GameObject Place(GameObject spiralMeshHolder = null) {
+  public static SpiralManipulator Place(GameObject spiralMeshHolder = null) {
     if (spiralMeshHolder == null) 
     {
       spiralMeshHolder = new GameObject("spiral holder");
@@ -31,7 +31,7 @@ public class NomaiTextArcArranger : MonoBehaviour {
     if (Random.value < 0.5) manip.transform.localScale = new Vector3(-1, 1, 1); // randomly mirror
     spiralMeshHolder.GetComponent<NomaiTextArcArranger>().spirals.Add(manip);
 
-    return rootArc;
+    return manip;
   }
 
   private void OnDrawGizmosSelected() 
@@ -190,7 +190,7 @@ public class NomaiTextArcArranger : MonoBehaviour {
       // actually move the spiral
       //
 
-      SpiralManipulator.PlaceChildOnParentPoint(spiral.gameObject, spiral.parent.gameObject, bestPointIndex);
+      SpiralManipulator.PlaceChildOnParentPoint(spiral, spiral.parent, bestPointIndex);
     }
   }
 }
@@ -205,31 +205,33 @@ public class SpiralManipulator : MonoBehaviour {
   
   public static int MIN_PARENT_POINT = 3;
   public static int MAX_PARENT_POINT = 26;
-
-  public Vector2 localPosition {
-      get { return new Vector2(this.transform.localPosition.x, this.transform.localPosition.y); }
-  }
-  public Vector2 position {
-      get { return new Vector2(this.transform.position.x, this.transform.position.y); }
-  }
-
+  
   
   private NomaiTextLine _NomaiTextLine;
   public NomaiTextLine NomaiTextLine 
   {
-      get 
-      {
-          if (_NomaiTextLine == null) _NomaiTextLine = GetComponent<NomaiTextLine>();
-          return _NomaiTextLine;
-      }
+    get 
+    {
+      if (_NomaiTextLine == null) _NomaiTextLine = GetComponent<NomaiTextLine>();
+      return _NomaiTextLine;
+    }
   }
 
-  public Vector2 center { get { return NomaiTextLine.GetWorldCenter(); } }
+  public Vector2 center { 
+    get { return NomaiTextLine.GetWorldCenter(); } 
+  }
+
+  public Vector2 localPosition {
+    get { return new Vector2(this.transform.localPosition.x, this.transform.localPosition.y); }
+  }
+  public Vector2 position {
+    get { return new Vector2(this.transform.position.x, this.transform.position.y); }
+  }
 
   public SpiralManipulator AddChild() {
     var index = Random.Range(MIN_PARENT_POINT, MAX_PARENT_POINT);
-    GameObject child = NomaiTextArcArranger.Place(this.transform.parent.gameObject);
-    PlaceChildOnParentPoint(child, this.gameObject, index);
+    var child = NomaiTextArcArranger.Place(this.transform.parent.gameObject);
+    PlaceChildOnParentPoint(child, this, index);
 
     child.GetComponent<SpiralManipulator>().parent = this;
     this.children.Add(child.GetComponent<SpiralManipulator>());
@@ -239,18 +241,23 @@ public class SpiralManipulator : MonoBehaviour {
   public void Mirror() 
   {       
       this.transform.localScale = new Vector3(-this.transform.localScale.x, 1, 1);
-      if (this.parent != null) SpiralManipulator.PlaceChildOnParentPoint(this.gameObject, this.parent.gameObject, this._parentPointIndex);
+      if (this.parent != null) SpiralManipulator.PlaceChildOnParentPoint(this, this.parent, this._parentPointIndex);
+  }
+  
+  public void UpdateChildren() 
+  {
+    foreach(var child in this.children) 
+    {
+        PlaceChildOnParentPoint(child, this, child._parentPointIndex);
+    }
   }
 
-  public static int PlaceChildOnParentPoint(GameObject child, GameObject parent, int parentPointIndex, bool updateChildren=true) 
+  public static int PlaceChildOnParentPoint(SpiralManipulator child, SpiralManipulator parent, int parentPointIndex, bool updateChildren=true) 
   {
-    var childManipulator = child.GetComponent<SpiralManipulator>();
-    var parentManipulator = parent.GetComponent<SpiralManipulator>();
-
     // track which points on the parent are being occupied
-    if (childManipulator._parentPointIndex != -1) parentManipulator.occupiedParentPoints.Remove(childManipulator._parentPointIndex);
-    childManipulator._parentPointIndex = parentPointIndex; // just in case this function was called without setting this value
-    parentManipulator.occupiedParentPoints.Add(parentPointIndex);
+    if (child._parentPointIndex != -1) parent.occupiedParentPoints.Remove(child._parentPointIndex);
+    child._parentPointIndex = parentPointIndex; // just in case this function was called without setting this value
+    parent.occupiedParentPoints.Add(parentPointIndex);
 
     // get the parent's points and make parentPointIndex valid
     var _points = parent.GetComponent<NomaiTextLine>().GetPoints();
@@ -273,10 +280,7 @@ public class SpiralManipulator : MonoBehaviour {
     // recursive update on all children so they move along with the parent
     if (updateChildren) 
     { 
-      foreach(var grandchild in childManipulator.children) 
-      {
-          PlaceChildOnParentPoint(grandchild.gameObject, child, grandchild._parentPointIndex);
-      }
+      child.UpdateChildren();
     }
 
     return parentPointIndex;
