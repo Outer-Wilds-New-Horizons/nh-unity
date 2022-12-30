@@ -40,6 +40,7 @@ public static class NomaiTextArcBuilder {
 
     var rootArc = new SpiralTextArc();
     rootArc.g.transform.parent = spiralMeshHolder.transform;
+    rootArc.g.transform.localEulerAngles = new Vector3(0, 0, Random.Range(-60, 60));
 
     var manip = rootArc.g.AddComponent<SpiralManipulator>();
     manip.controller = rootArc;
