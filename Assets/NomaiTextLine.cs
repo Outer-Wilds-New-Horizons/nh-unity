@@ -42,6 +42,8 @@ public class NomaiTextLine : MonoBehaviour
 
 	private void OnDrawGizmosSelected()
 	{
+        if (_points == null) return;
+
 		Vector3 zero = Vector3.zero;
 		for (int i = 0; i < _points.Length; i++)
 		{
