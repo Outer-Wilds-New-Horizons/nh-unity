@@ -6,14 +6,33 @@ using UnityEngine;
 [ExecuteInEditMode]
 public class NomaiTextArcArranger : MonoBehaviour {
   public List<SpiralManipulator> spirals = new List<SpiralManipulator>();
+  public List<SpiralManipulator> reverseToposortedSpirals = null;
+  public SpiralManipulator root { get; private set; }
   private Dictionary<int, int> sprialOverlapResolutionPriority = new Dictionary<int, int>();
 
   private static int MAX_MOVE_DISTANCE = 2;
 
-  public float maxX = 4;
-  public float minX = -4;
-  public float maxY = 5f;
-  public float minY = -1f;
+  public float maxX = 0.75f * 4;
+  public float minX = 0.75f * -4;
+  public float maxY = 0.75f * 5f;
+  public float minY = 0.75f * -1f;
+
+  public void GenerateReverseToposort() 
+  {
+    reverseToposortedSpirals = new List<SpiralManipulator>();
+    Queue<SpiralManipulator> frontierQueue = new Queue<SpiralManipulator>();
+    frontierQueue.Enqueue(root);
+
+    while(frontierQueue.Count > 0)
+    {
+      var spiral = frontierQueue.Dequeue();
+      reverseToposortedSpirals.Add(spiral);
+
+      foreach(var child in spiral.children) frontierQueue.Enqueue(child);
+    }
+
+    reverseToposortedSpirals.Reverse();
+  }
 
   public static SpiralManipulator Place(GameObject spiralMeshHolder = null) {
     if (spiralMeshHolder == null) 
@@ -28,12 +47,16 @@ public class NomaiTextArcArranger : MonoBehaviour {
 
     var manip = rootArc.AddComponent<SpiralManipulator>();
     if (Random.value < 0.5) manip.transform.localScale = new Vector3(-1, 1, 1); // randomly mirror
-    spiralMeshHolder.GetComponent<NomaiTextArcArranger>().spirals.Add(manip);
+
+    // add to arranger
+    var arranger = spiralMeshHolder.GetComponent<NomaiTextArcArranger>();
+    if (arranger.root == null) arranger.root = manip;
+    arranger.spirals.Add(manip);
 
     return manip;
   }
 
-  private void OnDrawGizmosSelected() 
+  public void OnDrawGizmosSelected() 
   {
     var topLeft     = new Vector3(minX, maxY) + transform.position;
     var topRight    = new Vector3(maxX, maxY) + transform.position;
@@ -71,54 +94,181 @@ public class NomaiTextArcArranger : MonoBehaviour {
       foreach (var s2 in spirals) 
       {
         jndex++;
-        if (s1 == s2) continue;
-        if (Vector3.Distance(s1.center, s2.center) > Mathf.Max(s1.NomaiTextLine.GetWorldRadius(), s2.NomaiTextLine.GetWorldRadius())) continue; // no overlap possible - too far away
-
-        var s1Points = s1.NomaiTextLine.GetPoints().Select(p => s1.transform.TransformPoint(p)).ToList();
-        var s2Points = s2.NomaiTextLine.GetPoints().Select(p => s2.transform.TransformPoint(p)).ToList();
-        var s1ThresholdForOverlap = Vector3.Distance(s1Points[0], s1Points[1]);
-        var s2ThresholdForOverlap = Vector3.Distance(s2Points[0], s2Points[1]);
-        var thresholdForOverlap = Mathf.Pow(Mathf.Max(s1ThresholdForOverlap, s2ThresholdForOverlap), 2); // square to save on computation (we'll work in distance squared from here on)
-
-        if (s1.parent == s2) s1Points.RemoveAt(0); // don't consider the base points so that we can check if children overlap their parents 
-        if (s2.parent == s1) s2Points.RemoveAt(0); // (note: the base point of a child is always exactly overlapping with one of the parent's points)
-
-        foreach(var p1 in s1Points)
-        {
-          foreach(var p2 in s2Points)
-          {
-              if (Vector3.SqrMagnitude(p1-p2) <= thresholdForOverlap) return new Vector2Int(index, jndex); // s1 and s2 overlap
-          }
-        }
+        if (Overlap(s1, s2)) return new Vector2Int(index, jndex);;
       }
     }
 
     return new Vector2Int(-1, -1);
   }
 
-  public void Step() {
-    // TODO: after setting child position on parent in Step(), check to see if this spiral exits the bounds - if so, move it away until it no longer does
-    // this ensures that a spiral can never be outside the bounds, it makes them rigid
+  public bool Overlap(SpiralManipulator s1, SpiralManipulator s2) 
+  {
+    if (s1 == s2) return false;
+    if (Vector3.Distance(s1.center, s2.center) > Mathf.Max(s1.NomaiTextLine.GetWorldRadius(), s2.NomaiTextLine.GetWorldRadius())) return false; // no overlap possible - too far away
+
+    var s1Points = s1.NomaiTextLine.GetPoints().Select(p => s1.transform.TransformPoint(p)).ToList();
+    var s2Points = s2.NomaiTextLine.GetPoints().Select(p => s2.transform.TransformPoint(p)).ToList();
+    var s1ThresholdForOverlap = Vector3.Distance(s1Points[0], s1Points[1]);
+    var s2ThresholdForOverlap = Vector3.Distance(s2Points[0], s2Points[1]);
+    var thresholdForOverlap = Mathf.Pow(Mathf.Max(s1ThresholdForOverlap, s2ThresholdForOverlap), 2); // square to save on computation (we'll work in distance squared from here on)
+
+    if (s1.parent == s2) s1Points.RemoveAt(0); // don't consider the base points so that we can check if children overlap their parents 
+    if (s2.parent == s1) s2Points.RemoveAt(0); // (note: the base point of a child is always exactly overlapping with one of the parent's points)
+
+    foreach(var p1 in s1Points)
+    {
+        foreach(var p2 in s2Points)
+        {
+            if (Vector3.SqrMagnitude(p1-p2) <= thresholdForOverlap) return true; // s1 and s2 overlap
+        }
+    }
+
+    return false;
+  }
+
+  // Spirals are placed by segmenting the whiteboard space into equal arcs of a semicircle, one arc per leaf of the dialogue tree
+  // then, the same is done for the arcs one level up from leaves, and so on and so on
+  // then each arc is placed at the point on its parent closest to the center of its assigned arc
+
+
+  // 1. arrange the spirals into levels (ie root, root's children, root's grandchildren, ...)
+  // 2. segment the available space into # of children equal arcs (the mathematical arc def)
+  // 3. place each child in the center of their allotted arcs
+  // 4. for each child, repeat steps 2-4
+  public void ArcAssignmentStrat() 
+  {
+
+  }
+  
+  class SpiralDataObject 
+  {
+    public SpiralManipulator spiral;
+    public List<int> parentPointPriorities;
+    public int lastPointTried;
+  }
+
+  public void Backtrack() 
+  {
+    List<SpiralDataObject> dos = new List<SpiralDataObject>();
+
+    
+    for (var s = 0; s < spirals.Count; s++) {
+      dos.Add(new SpiralDataObject() {
+        spiral = spirals[s],
+        parentPointPriorities = Enumerable.Range(SpiralManipulator.MIN_PARENT_POINT, SpiralManipulator.MAX_PARENT_POINT).OrderBy(a => System.Guid.NewGuid()).ToList(),
+        lastPointTried = 0
+      });
+    }
+
+    var EMERGENCY_STOP = 0;
+
+    var collision = false;
+    for (var s = 1; s < spirals.Count; ) 
+    {
+      if (s == 0) {
+        Debug.LogError("No placement found! Sorry, but it's not possible :(");
+        return;
+      }
+
+      for (; dos[s].lastPointTried < dos[s].parentPointPriorities.Count; dos[s].lastPointTried++)
+      {
+        if (EMERGENCY_STOP++ > 10000) {
+          Debug.LogError("Oh god please stop");
+          return;
+        }
+
+        var nextParentPointIndex = dos[s].parentPointPriorities[dos[s].lastPointTried];
+        if (dos[s].spiral.parent.occupiedParentPoints.Contains(nextParentPointIndex)) continue;
+
+        SpiralManipulator.PlaceChildOnParentPoint(dos[s].spiral, dos[s].spiral.parent, nextParentPointIndex);
+        collision = false;
+
+        // collision checks
+        if (OutsideBounds(dos[s].spiral))
+        {
+          collision = true;
+          continue;
+        }
+
+        for (var s2 = 0; s2 < s; s2++) 
+        {
+          if (Overlap(dos[s].spiral, dos[s2].spiral))
+          {
+            collision = true;
+            break;
+          }
+        }
+
+        if (!collision) break; // no collision, so this was a valid spot and we can stop searching
+      }
+
+      if(collision) {
+        // backtracking time! this guy wasn't able to be placed at all
+        dos[s].lastPointTried = 0;
+        s--;
+      } else {
+        s++; // successful placement! let's move along now
+      }
+    }
+  }
+
+  public bool OutsideBounds(SpiralManipulator spiral) 
+  {
+    var points = spiral.NomaiTextLine.GetPoints()
+      .Select(p => spiral.transform.TransformPoint(p))
+      .Select(p => spiral.transform.parent.InverseTransformPoint(p))
+      .ToList();
+
+    foreach(var point in points) {
+      if (point.x < minX || point.x > maxX ||
+          point.y < minY || point.y > maxY) 
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public void Step() 
+  {
+    if (reverseToposortedSpirals == null) GenerateReverseToposort();
 
     // TODO: for integration with NH - before generating spirals, seed the RNG with the hash of the XML filename for this convo
     // and add an option to specify the seed
 
+    Dictionary<SpiralManipulator, Vector2> childForces = new Dictionary<SpiralManipulator, Vector2>();
+
+    //Debug.Log(reverseToposortedSpirals.Count);
+    //Debug.Log( string.Join(", ", reverseToposortedSpirals.Select(hmslnk => hmslnk.gameObject.name) ) );
+
     var index = -1;
-    foreach (var s1 in spirals) 
+    foreach (var s1 in reverseToposortedSpirals) // treating the conversation like a tree datastructure, move "leaf" spirals first so that we can propogate their force up to the parents
     {
       index++;
-      if (s1.parent == null) continue;
-
-      //
-      // Calculate the force s1 should experience
-      //
 
       Vector2 force = Vector2.zero;
+
+      //
+      // Calculate the force s1 should experience from its children
+      //
+
+      if (childForces.ContainsKey(s1)) 
+      {
+        force += 0.9f * childForces[s1];
+      }
+      
+      //
+      // Calculate the force s1 should experience from fellow spirals
+      //
+
       foreach (var s2 in spirals) 
       {
         if (s1 == s2) continue;
         if (s1.parent == s2) continue;
         if (s1 == s2.parent) continue;
+
+        //if (!Overlap(s1, s2)) continue;
         
         // push away from other spirals
         var f = (s2.center - s1.center);
@@ -128,13 +278,19 @@ public class NomaiTextArcArranger : MonoBehaviour {
         force -= f2 / Mathf.Pow(f2.magnitude, 6);
       }
       
-      
+      //
       // push away from the edges
-      if (s1.center.y < minY+s1.transform.parent.position.y) force += new Vector2(0, Mathf.Pow(10f*minY - 10f*s1.center.y, 6));
-      if (s1.center.x < minX+s1.transform.parent.position.x) force += new Vector2(Mathf.Pow(10f*minX - 10f*s1.center.x, 6), 0);
-      if (s1.center.y > maxY+s1.transform.parent.position.y) force -= new Vector2(0, Mathf.Pow(10f*maxY - 10f*s1.center.y, 6));
-      if (s1.center.x > maxX+s1.transform.parent.position.x) force -= new Vector2(Mathf.Pow(10f*maxX - 10f*s1.center.x, 6), 0);
+      //
 
+      var MAX_EDGE_PUSH_FORCE = 1;
+      force += new Vector2(0, -1) * Mathf.Max(0, (s1.transform.localPosition.y + maxY)*(MAX_EDGE_PUSH_FORCE / maxY) - MAX_EDGE_PUSH_FORCE);
+      force += new Vector2(0,  1) * Mathf.Max(0, (s1.transform.localPosition.y + minY)*(MAX_EDGE_PUSH_FORCE / minY) - MAX_EDGE_PUSH_FORCE);
+      force += new Vector2(-1, 0) * Mathf.Max(0, (s1.transform.localPosition.x + maxX)*(MAX_EDGE_PUSH_FORCE / maxX) - MAX_EDGE_PUSH_FORCE);
+      force += new Vector2(1,  0) * Mathf.Max(0, (s1.transform.localPosition.x + minX)*(MAX_EDGE_PUSH_FORCE / minX) - MAX_EDGE_PUSH_FORCE);
+
+      // push up just to make everything a little more pretty (this is not neccessary to get an arrangement that simply has no overlap/spirals exiting the bounds)
+      force += new Vector2(0,  1) * 1;
+      
       //
       // renormalize the force magnitude (keeps force sizes reasonable, and improves stability in the case of small forces)
       //
@@ -143,8 +299,24 @@ public class NomaiTextArcArranger : MonoBehaviour {
       var scale = 0.75f;
       force = force.normalized * scale * (1 / (1 + Mathf.Exp(avg-force.magnitude)) - 1 / (1 + Mathf.Exp(avg))); // apply a sigmoid-ish smoothing operation, so only giant forces actually move the spirals
 
+
       //
-      // apply the forces as we go to increase stability?
+      // if this is the root spiral, then rotate it instead of trying to move it (what the rest of the code does)
+      //
+
+      if (s1.parent == null) 
+      {
+        // this is the root spiral, so rotate instead of moving
+        var finalAngle = Mathf.Atan2(force.y, force.x); // root spiral is always at 0, 0
+        var currentAngle = Mathf.Atan2(s1.center.y, s1.center.x); // root spiral is always at 0, 0
+        s1.transform.localEulerAngles = new Vector3(0, 0, finalAngle-currentAngle);
+        s1.UpdateChildren();
+
+        continue;
+      }
+
+      //
+      // look for the point closest to where the forces want to push this spiral
       //
 
       var spiral = s1;
@@ -180,6 +352,42 @@ public class NomaiTextArcArranger : MonoBehaviour {
       //
 
       SpiralManipulator.PlaceChildOnParentPoint(spiral, spiral.parent, bestPointIndex);
+      
+      //
+      // Ensure the spiral has not moved out of bounds, and if it has, move it back in bounds
+      //
+      
+      if (OutsideBounds(s1)) 
+      {
+        var start = s1._parentPointIndex;
+        var range = Mathf.Max(start-SpiralManipulator.MIN_PARENT_POINT, SpiralManipulator.MAX_PARENT_POINT-start);
+        var success = false;
+        for (var i = 1; i <= range; i++)
+        {
+          if (start-i >= SpiralManipulator.MIN_PARENT_POINT) 
+          { 
+            SpiralManipulator.PlaceChildOnParentPoint(s1, s1.parent, start-i);
+            if (!OutsideBounds(s1)) { success = true; break; }
+          }
+          
+          if (start+i <= SpiralManipulator.MAX_PARENT_POINT) 
+          { 
+            SpiralManipulator.PlaceChildOnParentPoint(s1, s1.parent, start+i);
+            if (!OutsideBounds(s1)) { success = true; break; }
+          }
+        }
+
+        if (!success) 
+        {
+          SpiralManipulator.PlaceChildOnParentPoint(s1, s1.parent, start);
+          Debug.LogWarning("Unable to place spiral " + s1.gameObject.name + " within bounds.");
+        }
+      }
+
+      if (!childForces.ContainsKey(s1.parent)) childForces[s1.parent] = Vector2.zero;
+      childForces[s1.parent] += force;
+
+      Debug.DrawRay(s1.transform.position, new Vector3(force.x, force.y, 0), Color.green);
     }
   }
 }
@@ -220,11 +428,32 @@ public class SpiralManipulator : MonoBehaviour {
   public SpiralManipulator AddChild() {
     var index = Random.Range(MIN_PARENT_POINT, MAX_PARENT_POINT);
     var child = NomaiTextArcArranger.Place(this.transform.parent.gameObject);
+    child.gameObject.name = this.gameObject.name + "." + this.children.Count;
     PlaceChildOnParentPoint(child, this, index);
 
     child.GetComponent<SpiralManipulator>().parent = this;
     this.children.Add(child.GetComponent<SpiralManipulator>());
+    this.transform.parent.GetComponent<NomaiTextArcArranger>().GenerateReverseToposort(); // update the arranger after adding this spiral as a child
     return child.GetComponent<SpiralManipulator>();
+  }
+
+  public void OnDestroy() 
+  {
+    this.DeleteSelf(false, true);
+  }
+
+  public void DeleteSelf(bool isRecursiveCall=false, bool isOnDestroy=false) 
+  {
+    var children = this.children.ToList(); // must clone the list because in a recursive call we're modifying it
+    foreach(var child in children) 
+    {
+      child.DeleteSelf(true);
+    }
+
+    this.transform.parent.GetComponent<NomaiTextArcArranger>().spirals.Remove(this);
+    if (!isRecursiveCall) this.parent.children.Remove(this);
+    if (!isRecursiveCall) this.transform.parent.GetComponent<NomaiTextArcArranger>().GenerateReverseToposort(); // update the arranger
+    if (!isOnDestroy) GameObject.DestroyImmediate(this.gameObject);
   }
 
   public void Mirror() 
@@ -273,5 +502,10 @@ public class SpiralManipulator : MonoBehaviour {
     }
 
     return parentPointIndex;
+  }
+  
+  public void OnDrawGizmosSelected() 
+  {
+    this.transform.parent.GetComponent<NomaiTextArcArranger>().OnDrawGizmosSelected();
   }
 }
