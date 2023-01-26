@@ -40,12 +40,6 @@ public class SpiralArrangerEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
 
-
-        if (GUILayout.Button("Backtrack"))
-        {
-            myTarget.Backtrack();
-        }
-
         if (GUILayout.Button("Step"))
         {
             myTarget.Step();
