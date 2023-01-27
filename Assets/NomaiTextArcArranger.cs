@@ -11,11 +11,11 @@ public class NomaiTextArcArranger : MonoBehaviour {
   private Dictionary<int, int> sprialOverlapResolutionPriority = new Dictionary<int, int>();
 
   private static int MAX_MOVE_DISTANCE = 2;
-
-  public float maxX = 0.75f * 4;
-  public float minX = 0.75f * -4;
-  public float maxY = 0.75f * 5f;
-  public float minY = 0.75f * -1f;
+  
+  public float maxX = 3;
+  public float minX = -3;
+  public float maxY = 2.75f;
+  public float minY = -1f;
 
   public void GenerateReverseToposort() 
   {
