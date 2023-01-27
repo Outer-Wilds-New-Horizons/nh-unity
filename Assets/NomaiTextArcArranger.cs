@@ -281,28 +281,23 @@ public class NomaiTextArcArranger : MonoBehaviour {
       // Ensure the spiral has not moved out of bounds, and if it has, move it back in bounds
       //
       
+      
       if (OutsideBounds(s1)) 
       {
         var start = s1._parentPointIndex;
-        var range = Mathf.Max(start-SpiralManipulator.MIN_PARENT_POINT, SpiralManipulator.MAX_PARENT_POINT-start);
-        var success = false;
-        for (var i = 1; i <= range; i++)
+        var originalMirror = s1.Mirrored;
+
+        var success = AttemptToPushSpiralInBounds(s1, start);
+        if (!success) 
         {
-          if (start-i >= SpiralManipulator.MIN_PARENT_POINT) 
-          { 
-            SpiralManipulator.PlaceChildOnParentPoint(s1, s1.parent, start-i);
-            if (!OutsideBounds(s1)) { success = true; break; }
-          }
-          
-          if (start+i <= SpiralManipulator.MAX_PARENT_POINT) 
-          { 
-            SpiralManipulator.PlaceChildOnParentPoint(s1, s1.parent, start+i);
-            if (!OutsideBounds(s1)) { success = true; break; }
-          }
+          s1.Mirror(); // try flipping it if nothing worked with original mirror
+          success = AttemptToPushSpiralInBounds(s1, start);
         }
 
         if (!success) 
         {
+          // if we couldn't put it inside the bounds, put it back how we found it (this increases stability of the rest of the spirals)
+          if (s1.Mirrored != originalMirror) s1.Mirror();
           SpiralManipulator.PlaceChildOnParentPoint(s1, s1.parent, start);
           Debug.LogWarning("Unable to place spiral " + s1.gameObject.name + " within bounds.");
         }
@@ -313,6 +308,28 @@ public class NomaiTextArcArranger : MonoBehaviour {
 
       Debug.DrawRay(s1.transform.position, new Vector3(force.x, force.y, 0), Color.green);
     }
+  }
+  
+  private bool AttemptToPushSpiralInBounds(SpiralManipulator s1, int start) 
+  {
+    var range = Mathf.Max(start-SpiralManipulator.MIN_PARENT_POINT, SpiralManipulator.MAX_PARENT_POINT-start);
+
+    for (var i = 1; i <= range; i++)
+    {
+      if (start-i >= SpiralManipulator.MIN_PARENT_POINT) 
+      { 
+        SpiralManipulator.PlaceChildOnParentPoint(s1, s1.parent, start-i);
+        if (!OutsideBounds(s1)) return true;
+      }
+              
+      if (start+i <= SpiralManipulator.MAX_PARENT_POINT) 
+      { 
+        SpiralManipulator.PlaceChildOnParentPoint(s1, s1.parent, start+i);
+        if (!OutsideBounds(s1)) return true;
+      }
+    }
+
+    return false;
   }
 }
 
