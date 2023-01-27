@@ -33,7 +33,17 @@ public class NomaiTextArcArranger : MonoBehaviour {
 
     reverseToposortedSpirals.Reverse();
   }
-
+  
+  public void LimitRepeatedMirrors() 
+  {
+    foreach(var spiral in reverseToposortedSpirals) 
+    {
+      if (spiral.Mirrored == spiral.parent?.Mirrored && spiral.Mirrored == spiral.parent?.parent?.Mirrored) 
+      {
+        spiral.parent.parent.Mirror(); // flipping the grandparent causes every 3rd spiral in a row to be flipped, meaning the maximum number of spirals in a row with the same mirror is 2
+      }
+    }
+  }
   public static SpiralManipulator Place(GameObject spiralMeshHolder = null) {
     if (spiralMeshHolder == null) 
     {
@@ -317,6 +327,7 @@ public class SpiralManipulator : MonoBehaviour {
   public static int MIN_PARENT_POINT = 3;
   public static int MAX_PARENT_POINT = 26;
   
+  public bool Mirrored { get { return this.transform.localScale.x < 0; } }
   
   private NomaiTextLine _NomaiTextLine;
   public NomaiTextLine NomaiTextLine 
