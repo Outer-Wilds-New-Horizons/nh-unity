@@ -44,20 +44,7 @@
         void vert (inout appdata_full v, out Input o)
         {         
             UNITY_INITIALIZE_OUTPUT(Input, o);
-			float4 vertWorldPos = mul(unity_ObjectToWorld, v.vertex);
-			//float3 lightDir = _WorldSpaceLightPos0.xyz;
-			float3 lightDir = _SunPosition - vertWorldPos.xyz;
 
-			float3 worldNormal = normalize(mul(unity_ObjectToWorld, float4(v.normal, 0.0)).xyz);
-			
-			float x = dot(worldNormal, lightDir);
-			float y = sqrt(x * x - 1);
-			float angle = atan2(y, x);
-			
-			if(x <= 0) 
-			{
-				v.normal = -v.normal;
-			}
         }
  
         void surf (Input IN, inout SurfaceOutput o)
