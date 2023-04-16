@@ -72,7 +72,8 @@
 			fixed4 smoothnessMap = tex2D(_SmoothnessMap, float2(i, j));
 			//float4 smoothnessTile = triplanar(IN.vertPos, IN.normal, _DetailSmoothnessScale, _DetailSmoothnessMap);
 			o.Smoothness = smoothnessMap.a * _Smoothness;
-			
+
+			o.Metallic = smoothnessMap.r * _Smoothness;
 		}
 		ENDCG
 	}
