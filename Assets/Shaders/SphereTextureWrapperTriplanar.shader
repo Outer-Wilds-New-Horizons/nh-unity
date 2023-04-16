@@ -117,6 +117,8 @@
 			//o.Smoothness = (smoothnessMap.a * _Smoothness) + (smoothnessTile.a * _DetailSmoothness);
 			//o.Smoothness = lerp(smoothnessMap.a, smoothnessTile.a, _DetailSmoothness) * _Smoothness;
 			//o.Smoothness = lerp(smoothnessMap.a * _Smoothness, smoothnessTile.a * _DetailSmoothness, _DetailSmoothness);
+
+			o.Metallic = smoothnessMap.r * smoothnessTile.r * 2 * _Smoothness;
 		}
 		ENDCG
 	}
