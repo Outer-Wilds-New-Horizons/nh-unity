@@ -21,10 +21,6 @@ public class SpiralManipulatorInspector : Editor
         if (GUILayout.Button("Mirror"))
         {
             myTarget.Mirror();
-            foreach(var child in myTarget.children) 
-            {
-                SpiralManipulator.PlaceChildOnParentPoint(child.gameObject, myTarget.gameObject, child._parentPointIndex);
-            }
         }
 
         if (GUILayout.Button("Add Child"))
