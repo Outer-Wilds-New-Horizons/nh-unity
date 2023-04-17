@@ -14,6 +14,19 @@ public static class NomaiTextArcBuilder {
 
   public static int MIN_PARENT_POINT = 3;
   public static int MAX_PARENT_POINT = 26;
+
+  public static int GetNumber()
+  {
+    //if (!AssetDatabase.IsValidFolder("Assets/Spirals")) AssetDatabase.CreateFolder("Assets", "Spirals");
+    //var _exists = AssetDatabase.LoadAssetAtPath("Assets/Spirals/Spiral" + i + ".asset", typeof(Mesh)) as Mesh;
+    //if (_exists != null){
+    //  i = i + 1;
+    //  return GetNumber();
+    //}
+    //else{
+      return i;
+    //}
+  }
   
   public static GameObject Place(GameObject spiralMeshHolder = null) {
     if (spiralMeshHolder == null) 
@@ -30,8 +43,20 @@ public static class NomaiTextArcBuilder {
     rootArc.g.transform.localEulerAngles = new Vector3(0, 0, Random.Range(-60, 60));
 
     var manip = rootArc.g.AddComponent<SpiralManipulator>();
+    manip.controller = rootArc;
     if (Random.value < 0.5) manip.transform.localScale = new Vector3(-1, 1, 1); // randomly mirror
     spiralMeshHolder.GetComponent<SpiralArranger>().spirals.Add(manip);
+    
+    //arcType = "Adult";
+    //spiralProfile = adultSpiralProfile;
+    
+    //var gameObject = new GameObject("spiral holder");
+    //spiralMeshHolder = gameObject;
+
+    //var rootArc = new SpiralTextArc();
+    //rootArc.MakeChild();
+    //spiralMesh = rootArc.m.children[0];
+    //spiralMesh.updateChildren();
 
     return rootArc.g;
   }
@@ -46,6 +71,14 @@ public static class NomaiTextArcBuilder {
     rootArc.g.name = "Text Arc Prefab " + (i++);
   }
   public static void PlaceChild() {
+    //var gameObject = new GameObject("spiral holder");
+    //spiralMeshHolder = gameObject;
+
+    // var rootArc = new SpiralTextArc();
+    // rootArc.MakeChild();
+    // spiralMesh = rootArc.m.children[0];
+    // spiralMesh.updateChildren();
+
     arcType = "Child";
     spiralProfile = childSpiralProfile;
 
@@ -133,11 +166,41 @@ public static class NomaiTextArcBuilder {
     }
 
     public void Step() {
+
+
+
+
+
+
+
+
+
+
+
+
+      
       // TODO: after setting child position on parent in Step(), check to see if this spiral exits the bounds - if so, move it away until it no longer does
       // this ensures that a spiral can never be outside the bounds, it makes them rigid
 
+      // TODO: add another method that checks to see if any spirals' convex hulls overlap. if so, pick one spiral from each overlapping pair and mirror
+      // it, then randomize its position, then run steps again
+        // simpler: check to see if any two spirals have any two points within max(s1.lengths[0], s2.lengths[0]) of eachother
+      
+
       // TODO: for integration with NH - before generating spirals, seed the RNG with the hash of the XML filename for this convo
       // and add an option to specify the seed
+
+
+
+
+
+
+
+
+
+
+
+
 
       var index = -1;
       foreach (var s1 in spirals) 
@@ -223,12 +286,21 @@ public static class NomaiTextArcBuilder {
         //
 
         SpiralManipulator.PlaceChildOnParentPoint(spiral.gameObject, spiral.parent.gameObject, bestPointIndex);
+
+        
+        Debug.DrawRay(spiral.position, force);
       }
+
+      //for (var i = 0; i < spirals.Count(); i++) 
+      //{
+            
+      //}
     }
   }
 
   [ExecuteInEditMode]
   public class SpiralManipulator : MonoBehaviour {
+    public SpiralTextArc controller;
     public SpiralManipulator parent;
     public List<SpiralManipulator> children = new List<SpiralManipulator>();
 
@@ -318,6 +390,7 @@ public static class NomaiTextArcBuilder {
 
     public SpiralTextArc() {
       g = new GameObject("New Nomai Spiral");
+      // g.transform.parent = spiralMeshHolder.transform;
       g.transform.localPosition = Vector3.zero;
       g.transform.localEulerAngles = Vector3.zero;
 
@@ -395,6 +468,13 @@ public static class NomaiTextArcBuilder {
       (typeof (NomaiTextLine)).InvokeMember("_radius", BindingFlags.SetField | BindingFlags.Instance | BindingFlags.NonPublic, null, owNomaiTextLine, new object[] { _radius });
       (typeof (NomaiTextLine)).InvokeMember("_active", BindingFlags.SetField | BindingFlags.Instance | BindingFlags.NonPublic, null, owNomaiTextLine, new object[] { _active });
     }
+
+    public SpiralTextArc MakeChild() {
+      var s = new SpiralTextArc();
+      s.m.startSOnParent = UnityEngine.Random.Range(50, 250);
+      m.addChild(s.m);
+      return s;
+    }
   }
 
   //
@@ -418,7 +498,7 @@ public static class NomaiTextArcBuilder {
   }
   
   public static SpiralProfile adultSpiralProfile = new SpiralProfile() {
-    canMirror = false, // we don't want to mirror the actual mesh itself anymore, we'll just mirror the game object using localScale.x
+    canMirror = false,//true,
     a = new Vector2(0.5f, 0.5f),
     b = new Vector2(0.3f, 0.6f),
     endS = new Vector2(0, 50f),
@@ -426,21 +506,21 @@ public static class NomaiTextArcBuilder {
     numSkeletonPoints = 51,
 
     innerWidth = 0.001f, // width at the tip
-    outerWidth = 0.05f, // width at the base
-    uvScale = 4.9f,
+    outerWidth = 0.05f, //0.107f; // width at the base
+    uvScale = 4.9f, //2.9f;
   };
 
   public static SpiralProfile childSpiralProfile = new SpiralProfile() {
-    canMirror = false, // we don't want to mirror the actual mesh itself anymore, we'll just mirror the game object using localScale.x
+    canMirror = false,//true,
     a = new Vector2(0.9f, 0.9f),
     b = new Vector2(0.305f, 0.4f),
-    endS = new Vector2(16f, 60f), 
+    endS = new Vector2(16f, 60f), //new Vector2(30f, 70f),
     skeletonScale = new Vector2(0.002f, 0.005f),
     numSkeletonPoints = 51,
 
     innerWidth = 0.001f/10f, // width at the tip
-    outerWidth = 2f*0.05f,  // width at the base
-    uvScale = 4.9f/3.5f, 
+    outerWidth = 2f*0.05f, //0.107f; // width at the base
+    uvScale = 4.9f/3.5f, //2.9f;
   };
 
   //
@@ -450,6 +530,8 @@ public static class NomaiTextArcBuilder {
   //
 
   public class SpiralMesh: Spiral {
+    public new List<SpiralMesh> children = new List<SpiralMesh>();
+
     public List<Vector3> skeleton;
     public List<Vector2> skeletonOutsidePoints;
 
@@ -474,7 +556,8 @@ public static class NomaiTextArcBuilder {
 
     public override void Randomize() {
       base.Randomize();
-      uvOffset = UnityEngine.Random.value; // this way even two spirals that are exactly the same shape will look different (this changes the starting point of the handwriting texture)
+      uvOffset = UnityEngine.Random.value;
+      updateChildren();
     }
 
     internal void updateMesh() {
@@ -499,19 +582,23 @@ public static class NomaiTextArcBuilder {
        f,
         s
       }).SelectMany(f =>f).ToArray(); // interleave vertsSide1 and vertsSide2
-      
-      List<int> triangles = new List<int>();
-      for (int i = 0; i<newVerts.Length - 2; i += 2) {
-          /*
-            |  ⟍  |
-            |    ⟍|
-          2 *-----* 3                  
-            |⟍    |                   
-            |  ⟍  |        
-            |    ⟍|                   
-          0 *-----* 1       
-            |⟍    | 
-          */
+
+      if (mesh != null && false) // TODO: remove the && false
+      {
+        mesh.vertices = newVerts;
+        mesh.RecalculateBounds();
+      } else {
+        List<int> triangles = new List<int>();
+        for (int i = 0; i<newVerts.Length - 2; i += 2) {
+          /*  |  ⟍  |
+              |    ⟍|
+            2 *-----* 3                  
+              |⟍    |                   
+              |  ⟍  |        
+              |    ⟍|                   
+            0 *-----* 1       
+              |⟍    | 
+           */
           triangles.Add(i + 2);
           triangles.Add(i + 1);
           triangles.Add(i);
@@ -519,17 +606,17 @@ public static class NomaiTextArcBuilder {
           triangles.Add(i + 2);
           triangles.Add(i + 3);
           triangles.Add(i + 1);
-      }
+        }
 
-      var startT = tFromArcLen(startS);
-      var endT = tFromArcLen(endS);
+        var startT = tFromArcLen(startS);
+        var endT = tFromArcLen(endS);
 
-      var rangeT = endT - startT;
-      var rangeS = endS - startS;
+        var rangeT = endT - startT;
+        var rangeS = endS - startS;
 
-      Vector2[] uvs = new Vector2[newVerts.Length];
-      Vector2[] uv2s = new Vector2[newVerts.Length];
-      for (int i = 0; i<skeleton.Count(); i++) {
+        Vector2[] uvs = new Vector2[newVerts.Length];
+        Vector2[] uv2s = new Vector2[newVerts.Length];
+        for (int i = 0; i<skeleton.Count(); i++) {
           float fraction = 1 - ((float) i) / ((float) skeleton.Count()); // casting is so uuuuuuuugly
 
           // note: cutting the sprial into numPoints equal slices of arclen would
@@ -547,20 +634,48 @@ public static class NomaiTextArcBuilder {
 
           uv2s[i * 2] = new Vector2(1 - sFraction, 0);
           uv2s[i * 2 + 1] = new Vector2(1 - sFraction, 1);
-      }
+        }
 
-      Vector3[] normals = new Vector3[newVerts.Length];
-      for (int i = 0; i<newVerts.Length; i++) normals[i] = new Vector3(0, 0, 1);
+        Vector3[] normals = new Vector3[newVerts.Length];
+        for (int i = 0; i<newVerts.Length; i++) normals[i] = new Vector3(0, 0, 1);
 
-      if (mesh == null){
-          mesh = new Mesh();
+        if (mesh == null){
+          mesh = new Mesh(); // TODO: remove the if statement
+          mesh.name = "Spiral" + GetNumber();
+          //AssetDatabase.CreateAsset(mesh, "Assets/Spirals/" + mesh.name + ".asset");
+        }
+        mesh.vertices = newVerts.ToArray();
+        mesh.triangles = triangles.ToArray().Reverse().ToArray(); // triangles need to be reversed so the spirals face the right way (I generated them backwards above, on accident)
+        mesh.uv = uvs;
+        mesh.uv2 = uv2s;
+        mesh.normals = normals;
+        mesh.RecalculateBounds();
       }
-      mesh.vertices = newVerts.ToArray();
-      mesh.triangles = triangles.ToArray().Reverse().ToArray(); // triangles need to be reversed so the spirals face the right way (I generated them backwards above, on accident)
-      mesh.uv = uvs;
-      mesh.uv2 = uv2s;
-      mesh.normals = normals;
-      mesh.RecalculateBounds();
+    }
+
+    internal void updateChild(SpiralMesh child, bool updateMesh = true) {
+      Vector3 pointAndNormal = getDrawnSpiralPointAndNormal(child.startSOnParent);
+      var cx = pointAndNormal.x;
+      var cy = pointAndNormal.y;
+      var cang = pointAndNormal.z + (this.mirror ? -1 : 1) * Mathf.PI / 2f; // if this spiral is mirrored, the child needs to be rotated by -90deg. if it's not, +90deg
+      child.x = cx;
+      child.y = cy;
+      child.ang = cang + (child.mirror ? Mathf.PI : 0);
+
+      if (updateMesh) child.updateMesh();
+    }
+
+    public void addChild(SpiralMesh child) {
+      updateChild(child);
+      this.children.Add(child);
+    }
+
+    public override void updateChildren() {
+      this.updateMesh();
+      this.children.ForEach(child => {
+        updateChild(child, false);
+        child.updateChildren();
+      });
     }
   }
 
@@ -581,6 +696,8 @@ public static class NomaiTextArcBuilder {
     public float x;
     public float y;
     public float ang;
+
+    // public float startIndex = 2.5f;
 
     public float startS = 42.87957f; // go all the way down to 0, all the way up to 50
     public float endS = 342.8796f;
@@ -613,6 +730,8 @@ public static class NomaiTextArcBuilder {
       this.startS = UnityEngine.Random.Range(profile.endS.x, profile.endS.y);
       this.scale = UnityEngine.Random.Range(profile.skeletonScale.x, profile.skeletonScale.y);
       if (profile.canMirror) this.mirror = UnityEngine.Random.value<0.5f;
+
+      Debug.Log($"{a} {b} {startS} {scale}");
     }
 
     internal virtual void updateChild(Spiral child) {
@@ -807,5 +926,78 @@ public static class NomaiTextArcBuilder {
   }
   private static float ln(float t) {
     return Mathf.Log(t);
+  }
+
+  public static class AddDebugShape
+  {
+    public static GameObject AddSphere(GameObject obj, float radius, Color color)
+    {
+      var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+      sphere.transform.name = "DebugSphere";
+
+      try
+      {
+        sphere.GetComponent<SphereCollider>().enabled = false;
+        sphere.transform.parent = obj.transform;
+        sphere.transform.localScale = new Vector3(radius, radius, radius);
+
+        sphere.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Sprites/Default"));
+        sphere.GetComponent<MeshRenderer>().sharedMaterial.color = color;
+      }
+      catch
+      {
+        // Something went wrong so make sure the sphere is deleted
+        GameObject.Destroy(sphere);
+      }
+
+      return sphere.gameObject;
+    }
+  
+    public static GameObject AddStick(GameObject obj,  Color color)
+    {
+      var width = 0.1f;
+      var length = 0.5f;
+
+      var newVerts = new Vector3[] {
+        new Vector3(0, -width/2f, 0),
+        new Vector3(0, width/2f, 0),
+        new Vector3(-length, -width/2f, 0),
+        new Vector3(-length, width/2f, 0),
+      };
+
+      /*
+        2 *-----* 3                  
+          |⟍    |                   
+          |  ⟍  |        
+          |    ⟍|                   
+        0 *-----* 1       
+        */
+      var triangles = new List<int>();
+      triangles.Add(0 + 2);
+      triangles.Add(0 + 1);
+      triangles.Add(0);
+
+      triangles.Add(0 + 2);
+      triangles.Add(0 + 3);
+      triangles.Add(0 + 1);
+
+      Vector3[] normals = new Vector3[newVerts.Length];
+      for (int i = 0; i<newVerts.Length; i++) normals[i] = new Vector3(0, 1, 0);
+
+      var mesh = new Mesh();
+      mesh.vertices = newVerts;
+      mesh.triangles = triangles.ToArray();
+      mesh.normals = normals;
+      mesh.RecalculateBounds();
+
+      var g = new GameObject();
+      g.AddComponent<MeshFilter>().sharedMesh = mesh;
+      g.AddComponent<MeshRenderer>();
+      g.transform.parent = obj.transform;
+      g.GetComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Sprites/Default"));
+      g.GetComponent<MeshRenderer>().sharedMaterial.color = color;
+
+      return g;
+    }
   }
 }
