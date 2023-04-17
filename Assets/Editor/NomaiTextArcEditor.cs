@@ -11,16 +11,14 @@ public class NomaiTextArcEditor : EditorWindow
 
     private void OnGUI()
     {
-        if (GUILayout.Button("Place New Conversation"))
+        if (GUILayout.Button("Place Arc"))
         {
-			var root = NomaiTextArcArranger.Place();
-            root.gameObject.name = "Spiral 0";
+			NomaiTextArcArranger.Place();
         }
         
         if (GUILayout.Button("Place Random Conversation"))
         {
 			var root = NomaiTextArcArranger.Place().GetComponent<SpiralManipulator>();
-            root.gameObject.name = "Spiral 0";
             generateChildren(root);
         }
     }
