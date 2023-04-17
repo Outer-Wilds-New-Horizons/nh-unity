@@ -90,11 +90,6 @@ public static class NomaiTextArcBuilder {
   public class SpiralArranger : MonoBehaviour {
     public List<SpiralManipulator> spirals = new List<SpiralManipulator>();
 
-    public float maxX = 4;
-    public float minX = -4;
-    public float maxY = 5f;
-    public float minY = -1f;
-
     public int SPIRAL_OF_INTEREST = 6;
     public bool step = false;
     private void Update()
@@ -103,18 +98,6 @@ public static class NomaiTextArcBuilder {
       step = false;
 
       Step();
-    }
-
-    private void OnDrawGizmosSelected() 
-    {
-      var topLeft     = new Vector3(minX, maxY) + transform.position;
-      var topRight    = new Vector3(maxX, maxY) + transform.position;
-      var bottomRight = new Vector3(maxX, minY) + transform.position;
-      var bottomLeft  = new Vector3(minX, minY) + transform.position;
-      Debug.DrawLine(topLeft, topRight, Color.red);
-      Debug.DrawLine(topRight, bottomRight, Color.red);
-      Debug.DrawLine(bottomRight, bottomLeft, Color.red);
-      Debug.DrawLine(bottomLeft, topLeft, Color.red);
     }
 
     private void Step() {
@@ -135,34 +118,16 @@ public static class NomaiTextArcBuilder {
           if (s1.parent == s2) continue;
           if (s1 == s2.parent) continue;
           
-          // push away from other spirals
           var f = (s2.center - s1.center);
           force -= f / Mathf.Pow(f.magnitude, 6);
 
           var f2 = (s2.localPosition - s1.localPosition);
           force -= f2 / Mathf.Pow(f2.magnitude, 6);
-
-          // account for spirals that get locked together (this happens when a mirrored spiral and non-mirrored spiral are close enough together that one spiral has its base to the left of the other's base and its center to the right of the other's center)
-          if (/*s1.parent == s2.parent && */ Vector2.Angle(f, f2) > 90) 
-          {
-            s1.transform.localScale = new Vector3(-s1.transform.localScale.x, 1, 1);
-            force = Vector2.zero;
-            break;
-          }
           
+          if (index == SPIRAL_OF_INTEREST) Debug.Log("f: " + f);
+          if (index == SPIRAL_OF_INTEREST) Debug.Log("f2: " + f2);
           if (index == SPIRAL_OF_INTEREST) Debug.DrawLine(s2.center, s1.center);
         }
-        
-        
-        // push away from the edges
-        if (s1.center.y < minY+s1.transform.parent.position.y) force += new Vector2(0, Mathf.Pow(10f*minY - 10f*s1.center.y, 6));
-        if (s1.center.x < minX+s1.transform.parent.position.x) force += new Vector2(Mathf.Pow(10f*minX - 10f*s1.center.x, 6), 0);
-        if (s1.center.y > maxY+s1.transform.parent.position.y) force -= new Vector2(0, Mathf.Pow(10f*maxY - 10f*s1.center.y, 6));
-        if (s1.center.x > maxX+s1.transform.parent.position.x) force -= new Vector2(Mathf.Pow(10f*maxX - 10f*s1.center.x, 6), 0);
-
-        //
-        // renormalize the force magnitude (keeps force sizes reasonable, and improves stability in the case of small forces)
-        //
 
         var avg = 1; // the size of vector required to get a medium push
         var scale = 0.75f;
@@ -178,7 +143,7 @@ public static class NomaiTextArcBuilder {
         var parentPoints = spiral.parent.GetComponent<NomaiTextLine>().GetPoints();
         
         // pick the parent point that's closest to center+force, and move to there
-        var idealPoint = spiral.position + force;
+        var idealPoint = spiral.localPosition + force;
         var bestPointIndex = 0;
         var bestPointDistance = 99999999f;
         for (var j = MIN_PARENT_POINT; j < MAX_PARENT_POINT; j++) 
@@ -186,10 +151,7 @@ public static class NomaiTextArcBuilder {
           // skip this point if it's already occupied by ANOTHER spiral (if it's occupied by this spiral, DO count it)
           if (j != spiral.parentPointIndex && spiral.parent.occupiedParentPoints.Contains(j)) continue;
 
-          var point = parentPoints[j];
-          point = spiral.parent.transform.TransformPoint(point);
-
-          var dist = Vector2.Distance(point, idealPoint);
+          var dist = Vector2.Distance(parentPoints[j], idealPoint);
           if (dist < bestPointDistance) {
             bestPointDistance = dist;
             bestPointIndex = j;
@@ -214,7 +176,9 @@ public static class NomaiTextArcBuilder {
         //
         spiral.UpdateCenter();
         
-        Debug.DrawRay(spiral.position, force);
+        Debug.DrawRay(spiral.localPosition, force);
+
+        if (index == SPIRAL_OF_INTEREST) Debug.Log(force);
       }
 
       //for (var i = 0; i < spirals.Count(); i++) 
@@ -273,14 +237,10 @@ public static class NomaiTextArcBuilder {
     public bool addChild = false;
     public bool updatePos = false;
     public bool mirror = false;
-    
+
     public Vector2 localPosition {
         get { return new Vector2(this.transform.localPosition.x, this.transform.localPosition.y); }
     }
-    public Vector2 position {
-        get { return new Vector2(this.transform.position.x, this.transform.position.y); }
-    }
-
     
     private NomaiTextLine _NomaiTextLine;
     public NomaiTextLine NomaiTextLine 
