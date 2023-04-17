@@ -27,17 +27,5 @@ public class SpiralManipulatorInspector : Editor
         {
             myTarget.AddChild();
         }
-        
-
-        if (GUILayout.Button("Check Out of Bounds"))
-        {
-            var truth = myTarget.transform.parent.GetComponent<NomaiTextArcArranger>().OutsideBounds(myTarget);
-            Debug.Log("Out of bounds: " + truth);
-        }
-
-        if (GUILayout.Button("Delete"))
-        {
-            myTarget.DeleteSelf();
-        }
     }
 }
