@@ -90,7 +90,6 @@ public static class NomaiTextArcBuilder {
   public class SpiralArranger : MonoBehaviour {
     public List<SpiralManipulator> spirals = new List<SpiralManipulator>();
     private HashSet<int> spiralsThatHaveBeenMirrored = new HashSet<int>();
-    private Dictionary<int, int> sprialOverlapResolutionPriority = new Dictionary<int, int>();
 
     public float maxX = 4;
     public float minX = -4;
@@ -111,18 +110,27 @@ public static class NomaiTextArcBuilder {
       Debug.DrawLine(bottomLeft, topLeft, Color.red);
     }
 
-    public int AttemptOverlapResolution(Vector2Int overlappingSpirals) 
+    // consider the following:
+    // we have a collision between 1 and 5,
+    // and we try mirroring 1, it doesn't work,
+    // so we try mirroring 5, which does work
+    // but now we have a collision between 1 and 6 (which we've previously already tried mirroring, and it didn't work)
+    // we mirror 1 and it does work
+    // but now we have a collision between 5 and 6
+    // since 1 has also been mirrored since the last collision between 1 and 5, we should try mirroring 5 again
+
+    // TODO: rework the below to be a priority system rather than an accept/deny system
+    // each time an index gets mirrored, lower its priority by 1. always mirror the highest priority index of the pair (resolving ties arbitrarily (randomly?))
+    public bool AttemptOverlapResolution(Vector2Int overlappingSpirals) 
     {
-        if (!sprialOverlapResolutionPriority.ContainsKey(overlappingSpirals.x)) sprialOverlapResolutionPriority[overlappingSpirals.x] = 0;
-        if (!sprialOverlapResolutionPriority.ContainsKey(overlappingSpirals.y)) sprialOverlapResolutionPriority[overlappingSpirals.y] = 0;
-
         int mirrorIndex = overlappingSpirals.x;
-        if (sprialOverlapResolutionPriority[overlappingSpirals.y] > sprialOverlapResolutionPriority[overlappingSpirals.x]) mirrorIndex = overlappingSpirals.y;
 
+        if (spiralsThatHaveBeenMirrored.Contains(mirrorIndex)) mirrorIndex = overlappingSpirals.y;
+        if (spiralsThatHaveBeenMirrored.Contains(mirrorIndex)) return false; // no resolution possible
+        
         this.spirals[mirrorIndex].Mirror();
-        sprialOverlapResolutionPriority[mirrorIndex]--;
-
-        return mirrorIndex;
+        spiralsThatHaveBeenMirrored.Add(mirrorIndex);
+        return true;
     }
 
     public Vector2Int Overlap() 
@@ -138,19 +146,16 @@ public static class NomaiTextArcBuilder {
         {
           jndex++;
           if (s1 == s2) continue;
-          //if (s1.parent == s2) continue;
-          //if (s1 == s2.parent) continue;
+          if (s1.parent == s2) continue;
+          if (s1 == s2.parent) continue;
 
           if (Vector3.Distance(s1.center, s2.center) > Mathf.Max(s1.NomaiTextLine.GetWorldRadius(), s2.NomaiTextLine.GetWorldRadius())) continue; // no overlap possible - too far away
 
-          var s1Points = s1.NomaiTextLine.GetPoints().Select(p => s1.transform.TransformPoint(p)).ToList();
-          var s2Points = s2.NomaiTextLine.GetPoints().Select(p => s2.transform.TransformPoint(p)).ToList();
+          var s1Points = s1.NomaiTextLine.GetPoints().Select(p => s1.transform.TransformPoint(p)).ToArray();
+          var s2Points = s2.NomaiTextLine.GetPoints().Select(p => s2.transform.TransformPoint(p)).ToArray();
           var s1ThresholdForOverlap = Vector3.Distance(s1Points[0], s1Points[1]);
           var s2ThresholdForOverlap = Vector3.Distance(s2Points[0], s2Points[1]);
           var thresholdForOverlap = Mathf.Pow(Mathf.Max(s1ThresholdForOverlap, s2ThresholdForOverlap), 2); // square to save on computation (we'll work in distance squared from here on)
-
-          if (s1.parent == s2) s1Points.RemoveAt(0); // don't consider the base points so that we can check if children overlap their parents 
-          if (s2.parent == s1) s2Points.RemoveAt(0); // (note: the base point of a child is always exactly overlapping with one of the parent's points)
 
           foreach(var p1 in s1Points)
           {
@@ -222,13 +227,13 @@ public static class NomaiTextArcBuilder {
           var f2 = (s2.localPosition - s1.localPosition);
           force -= f2 / Mathf.Pow(f2.magnitude, 6);
 
-          //// account for spirals that get locked together (this happens when a mirrored spiral and non-mirrored spiral are close enough together that one spiral has its base to the left of the other's base and its center to the right of the other's center)
-          //if (Vector2.Angle(f, f2) > 90) 
-          //{
-          //  s1.transform.localScale = new Vector3(-s1.transform.localScale.x, 1, 1);
-          //  force = Vector2.zero;
-          //  break;
-          //}
+          // account for spirals that get locked together (this happens when a mirrored spiral and non-mirrored spiral are close enough together that one spiral has its base to the left of the other's base and its center to the right of the other's center)
+          if (Vector2.Angle(f, f2) > 90) 
+          {
+            s1.transform.localScale = new Vector3(-s1.transform.localScale.x, 1, 1);
+            force = Vector2.zero;
+            break;
+          }
           
           if (index == SPIRAL_OF_INTEREST) Debug.DrawLine(s2.center, s1.center);
         }
@@ -483,6 +488,8 @@ public static class NomaiTextArcBuilder {
   //
   //
 
+  // TODO: spiral profiles, pass as a value to constructor, use value in Randomize()
+  // use current defaults to make an AdultSpiralProfile, then make ChildSpiralProfile and StrangerSpiralProfile
   public struct SpiralProfile {
     // all of the Vector2 params here refer to a range of valid values
     public bool canMirror;
