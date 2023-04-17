@@ -4,6 +4,7 @@
 		[NoScaleOffset] _MainTex ("Albedo Map", 2D) = "white" {}
 
 		_Smoothness ("Smoothness", Range(0.0, 1.0)) = 0.0
+		_Metallic ("Metallic", Range(0.0, 1.0)) = 0.0
 		[NoScaleOffset] _SmoothnessMap ("Smoothness Map", 2D) = "white" {}
 
 		_BumpStrength("Normal Strength", Float) = 1.0
@@ -25,6 +26,7 @@
 
 		sampler2D _MainTex;
 		float _Smoothness;
+		float _Metallic;
 		sampler2D _SmoothnessMap;
 		float _BumpStrength;
 		sampler2D _BumpMap;
@@ -44,8 +46,8 @@
 			float3 v = mul(unity_WorldToObject, float4(IN.worldPos,1)).xyz;
 			float PI = 3;
 
-			float latitude = acos(v.z / sqrt(v.x * v.x + v.y * v.y + v.z * v.z));
-			float longitude = atan2(v.y, v.x);
+			float latitude = acos(-v.y / sqrt(v.x * v.x + v.y * v.y + v.z * v.z));
+			float longitude = atan2(v.x, -v.z);
 
 			float i = fmod(longitude, 2 * UNITY_PI) / (2.0 * UNITY_PI);
 			float j = fmod(latitude, UNITY_PI) / UNITY_PI;
@@ -62,18 +64,17 @@
 
 			o.Emission = tex2D(_EmissionMap, float2(i, j)) * _EmissionColor;
 
-			//o.Normal = UnpackScaleNormal (tex2D (_BumpMap, float2(i, j)), _BumpScale);
 
-			// Normals
-			//float3 normalMapFlat = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _DetailBumpScale, IN.tangent, _DetailBumpMap);
-			//float3 normal = lerp(float3(0,0,1), normalMapFlat, _DetailBumpStrength);
-			//o.Normal = normal; // + UnpackScaleNormal(tex2D (_BumpMap, float2(i, j)), _BumpStrength);; broken due to sideways mapping
+			//float3 triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _DetailBumpScale, IN.tangent, _DetailBumpMap);
+			float3 mapNormal = UnpackScaleNormal(tex2D (_BumpMap, float2(i, j)), _BumpStrength);
+			//float3 normal = lerp(float3(0,0,1), triplanarNormal, _DetailBumpStrength) + mapNormal;
+			o.Normal = mapNormal;
 
 			fixed4 smoothnessMap = tex2D(_SmoothnessMap, float2(i, j));
 			//float4 smoothnessTile = triplanar(IN.vertPos, IN.normal, _DetailSmoothnessScale, _DetailSmoothnessMap);
 			o.Smoothness = smoothnessMap.a * _Smoothness;
 
-			o.Metallic = smoothnessMap.r * _Smoothness;
+			o.Metallic = smoothnessMap.r * _Metallic;
 		}
 		ENDCG
 	}
