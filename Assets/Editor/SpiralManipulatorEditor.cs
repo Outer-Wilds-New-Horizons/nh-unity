@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using static NomaiTextArcBuilder;
 
 [CustomEditor(typeof(SpiralManipulator))]
 public class SpiralManipulatorInspector : Editor 
@@ -10,7 +11,7 @@ public class SpiralManipulatorInspector : Editor
     {
         SpiralManipulator myTarget = (SpiralManipulator)target;
 
-        var newPoint = EditorGUILayout.IntSlider(myTarget._parentPointIndex, SpiralManipulator.MIN_PARENT_POINT, SpiralManipulator.MAX_PARENT_POINT);
+        var newPoint = EditorGUILayout.IntSlider(myTarget._parentPointIndex, NomaiTextArcBuilder.MIN_PARENT_POINT, NomaiTextArcBuilder.MAX_PARENT_POINT);
         if (newPoint != myTarget._parentPointIndex) 
         {
             myTarget._parentPointIndex = newPoint;

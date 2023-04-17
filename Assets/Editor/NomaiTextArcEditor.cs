@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using static NomaiTextArcBuilder;
 
 public class NomaiTextArcEditor : EditorWindow
 {
@@ -13,17 +14,17 @@ public class NomaiTextArcEditor : EditorWindow
     {
         if (GUILayout.Button("Place Arc"))
         {
-			NomaiTextArcArranger.Place();
+			NomaiTextArcBuilder.Place();
         }
         
         if (GUILayout.Button("Place Random Conversation"))
         {
-			var root = NomaiTextArcArranger.Place().GetComponent<SpiralManipulator>();
+			var root = NomaiTextArcBuilder.Place().GetComponent<NomaiTextArcBuilder.SpiralManipulator>();
             generateChildren(root);
         }
     }
 
-    private void generateChildren(SpiralManipulator root, int depth = 0) {
+    private void generateChildren(NomaiTextArcBuilder.SpiralManipulator root, int depth = 0) {
         if (depth > 2) return;
         else if (depth > 0 && Random.value < 0.5f) return;
 

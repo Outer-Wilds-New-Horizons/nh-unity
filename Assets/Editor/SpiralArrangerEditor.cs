@@ -2,13 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using static NomaiTextArcBuilder;
 
-[CustomEditor(typeof(NomaiTextArcArranger))]
+[CustomEditor(typeof(SpiralArranger))]
 public class SpiralArrangerEditor : Editor 
 {
     public override void OnInspectorGUI() 
     {
-        NomaiTextArcArranger myTarget = (NomaiTextArcArranger)target;
+        SpiralArranger myTarget = (SpiralArranger)target;
         
         if (GUILayout.Button("Step"))
         {
