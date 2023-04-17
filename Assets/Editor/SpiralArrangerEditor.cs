@@ -6,46 +6,10 @@ using UnityEditor;
 [CustomEditor(typeof(NomaiTextArcArranger))]
 public class SpiralArrangerEditor : Editor 
 {
-    SerializedProperty m_minX;
-    SerializedProperty m_maxX;
-    SerializedProperty m_minY;
-    SerializedProperty m_maxY;
-
-    void OnEnable()
-    {
-        // Fetch the objects from the GameObject script to display in the inspector
-        m_minX = serializedObject.FindProperty("minX");
-        m_maxX = serializedObject.FindProperty("maxX");
-        m_minY = serializedObject.FindProperty("minY");
-        m_maxY = serializedObject.FindProperty("maxY");
-    }
-
     public override void OnInspectorGUI() 
     {
         NomaiTextArcArranger myTarget = (NomaiTextArcArranger)target;
         
-        GUILayout.Label("Bounds");
-        GUILayout.BeginHorizontal();
-            GUILayout.Label("X");
-            EditorGUILayout.PropertyField(m_minX, GUIContent.none);
-            EditorGUILayout.PropertyField(m_maxX, GUIContent.none);
-        GUILayout.EndHorizontal();
-
-        GUILayout.BeginHorizontal();
-            GUILayout.Label("Y");
-            EditorGUILayout.PropertyField(m_minY, GUIContent.none);
-            EditorGUILayout.PropertyField(m_maxY, GUIContent.none);
-        GUILayout.EndHorizontal();
-
-        serializedObject.ApplyModifiedProperties();
-
-
-
-        if (GUILayout.Button("Backtrack"))
-        {
-            myTarget.Backtrack();
-        }
-
         if (GUILayout.Button("Step"))
         {
             myTarget.Step();
