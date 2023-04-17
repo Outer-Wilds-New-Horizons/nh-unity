@@ -126,6 +126,92 @@ public class NomaiTextArcArranger : MonoBehaviour {
     return false;
   }
 
+  // Spirals are placed by segmenting the whiteboard space into equal arcs of a semicircle, one arc per leaf of the dialogue tree
+  // then, the same is done for the arcs one level up from leaves, and so on and so on
+  // then each arc is placed at the point on its parent closest to the center of its assigned arc
+
+
+  // 1. arrange the spirals into levels (ie root, root's children, root's grandchildren, ...)
+  // 2. segment the available space into # of children equal arcs (the mathematical arc def)
+  // 3. place each child in the center of their allotted arcs
+  // 4. for each child, repeat steps 2-4
+  public void ArcAssignmentStrat() 
+  {
+
+  }
+  
+  class SpiralDataObject 
+  {
+    public SpiralManipulator spiral;
+    public List<int> parentPointPriorities;
+    public int lastPointTried;
+  }
+
+  public void Backtrack() 
+  {
+    List<SpiralDataObject> dos = new List<SpiralDataObject>();
+
+    
+    for (var s = 0; s < spirals.Count; s++) {
+      dos.Add(new SpiralDataObject() {
+        spiral = spirals[s],
+        parentPointPriorities = Enumerable.Range(SpiralManipulator.MIN_PARENT_POINT, SpiralManipulator.MAX_PARENT_POINT).OrderBy(a => System.Guid.NewGuid()).ToList(),
+        lastPointTried = 0
+      });
+    }
+
+    var EMERGENCY_STOP = 0;
+
+    var collision = false;
+    for (var s = 1; s < spirals.Count; ) 
+    {
+      if (s == 0) {
+        Debug.LogError("No placement found! Sorry, but it's not possible :(");
+        return;
+      }
+
+      for (; dos[s].lastPointTried < dos[s].parentPointPriorities.Count; dos[s].lastPointTried++)
+      {
+        if (EMERGENCY_STOP++ > 10000) {
+          Debug.LogError("Oh god please stop");
+          return;
+        }
+
+        var nextParentPointIndex = dos[s].parentPointPriorities[dos[s].lastPointTried];
+        if (dos[s].spiral.parent.occupiedParentPoints.Contains(nextParentPointIndex)) continue;
+
+        SpiralManipulator.PlaceChildOnParentPoint(dos[s].spiral, dos[s].spiral.parent, nextParentPointIndex);
+        collision = false;
+
+        // collision checks
+        if (OutsideBounds(dos[s].spiral))
+        {
+          collision = true;
+          continue;
+        }
+
+        for (var s2 = 0; s2 < s; s2++) 
+        {
+          if (Overlap(dos[s].spiral, dos[s2].spiral))
+          {
+            collision = true;
+            break;
+          }
+        }
+
+        if (!collision) break; // no collision, so this was a valid spot and we can stop searching
+      }
+
+      if(collision) {
+        // backtracking time! this guy wasn't able to be placed at all
+        dos[s].lastPointTried = 0;
+        s--;
+      } else {
+        s++; // successful placement! let's move along now
+      }
+    }
+  }
+
   public bool OutsideBounds(SpiralManipulator spiral) 
   {
     var points = spiral.NomaiTextLine.GetPoints()
