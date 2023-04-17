@@ -30,16 +30,6 @@ public class NomaiTextLine : MonoBehaviour
 		return base.transform.TransformPoint(_center);
 	}
 
-	public float GetLocalRadius()
-	{
-		return _radius;
-	}
-
-	public float GetWorldRadius()
-	{
-		return Mathf.Abs(base.transform.lossyScale.x) * _radius;
-	}
-
 	private void OnDrawGizmosSelected()
 	{
 		Vector3 zero = Vector3.zero;

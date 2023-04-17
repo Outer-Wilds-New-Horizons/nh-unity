@@ -44,6 +44,7 @@ public static class NomaiTextArcBuilder {
     var manip = rootArc.g.AddComponent<SpiralManipulator>();
     manip.controller = rootArc;
     if (Random.value < 0.5) manip.transform.localScale = new Vector3(-1, 1, 1); // randomly mirror
+    manip.UpdateCenter();
     spiralMeshHolder.GetComponent<SpiralArranger>().spirals.Add(manip);
     
     //arcType = "Adult";
@@ -88,7 +89,6 @@ public static class NomaiTextArcBuilder {
   [ExecuteInEditMode]
   public class SpiralArranger : MonoBehaviour {
     public List<SpiralManipulator> spirals = new List<SpiralManipulator>();
-    private HashSet<int> spiralsThatHaveBeenMirrored = new HashSet<int>();
 
     public float maxX = 4;
     public float minX = -4;
@@ -96,6 +96,14 @@ public static class NomaiTextArcBuilder {
     public float minY = -1f;
 
     public int SPIRAL_OF_INTEREST = 6;
+    public bool step = false;
+    private void Update()
+    {
+      if (!step) return;
+      step = false;
+
+      Step();
+    }
 
     private void OnDrawGizmosSelected() 
     {
@@ -109,102 +117,10 @@ public static class NomaiTextArcBuilder {
       Debug.DrawLine(bottomLeft, topLeft, Color.red);
     }
 
-    // consider the following:
-    // we have a collision between 1 and 5,
-    // and we try mirroring 1, it doesn't work,
-    // so we try mirroring 5, which does work
-    // but now we have a collision between 1 and 6 (which we've previously already tried mirroring, and it didn't work)
-    // we mirror 1 and it does work
-    // but now we have a collision between 5 and 6
-    // since 1 has also been mirrored since the last collision between 1 and 5, we should try mirroring 5 again
+    private void Step() {
+      //List<Vector2> forces = new List<Vector2>();
 
-    // TODO: rework the below to be a priority system rather than an accept/deny system
-    // each time an index gets mirrored, lower its priority by 1. always mirror the highest priority index of the pair (resolving ties arbitrarily (randomly?))
-    public bool AttemptOverlapResolution(Vector2Int overlappingSpirals) 
-    {
-        int mirrorIndex = overlappingSpirals.x;
-
-        if (spiralsThatHaveBeenMirrored.Contains(mirrorIndex)) mirrorIndex = overlappingSpirals.y;
-        if (spiralsThatHaveBeenMirrored.Contains(mirrorIndex)) return false; // no resolution possible
-        
-        this.spirals[mirrorIndex].Mirror();
-        spiralsThatHaveBeenMirrored.Add(mirrorIndex);
-        return true;
-    }
-
-    public Vector2Int Overlap() 
-    {
-      var index = -1;
-      foreach (var s1 in spirals) 
-      {
-        index++;
-        if (s1.parent == null) continue;
-
-        var jndex = -1;
-        foreach (var s2 in spirals) 
-        {
-          jndex++;
-          if (s1 == s2) continue;
-          if (s1.parent == s2) continue;
-          if (s1 == s2.parent) continue;
-
-          if (Vector3.Distance(s1.center, s2.center) > Mathf.Max(s1.NomaiTextLine.GetWorldRadius(), s2.NomaiTextLine.GetWorldRadius())) continue; // no overlap possible - too far away
-
-          var s1Points = s1.NomaiTextLine.GetPoints().Select(p => s1.transform.TransformPoint(p)).ToArray();
-          var s2Points = s2.NomaiTextLine.GetPoints().Select(p => s2.transform.TransformPoint(p)).ToArray();
-          var s1ThresholdForOverlap = Vector3.Distance(s1Points[0], s1Points[1]);
-          var s2ThresholdForOverlap = Vector3.Distance(s2Points[0], s2Points[1]);
-          var thresholdForOverlap = Mathf.Pow(Mathf.Max(s1ThresholdForOverlap, s2ThresholdForOverlap), 2); // square to save on computation (we'll work in distance squared from here on)
-
-          foreach(var p1 in s1Points)
-          {
-            foreach(var p2 in s2Points)
-            {
-                if (Vector3.SqrMagnitude(p1-p2) <= thresholdForOverlap) return new Vector2Int(index, jndex); // s1 and s2 overlap
-            }
-          }
-        }
-      }
-
-      return new Vector2Int(-1, -1);
-    }
-
-    public void Step() {
-
-
-
-
-
-
-
-
-
-
-
-
-      
-      // TODO: after setting child position on parent in Step(), check to see if this spiral exits the bounds - if so, move it away until it no longer does
-      // this ensures that a spiral can never be outside the bounds, it makes them rigid
-
-      // TODO: add another method that checks to see if any spirals' convex hulls overlap. if so, pick one spiral from each overlapping pair and mirror
-      // it, then randomize its position, then run steps again
-        // simpler: check to see if any two spirals have any two points within max(s1.lengths[0], s2.lengths[0]) of eachother
-      
-
-      // TODO: for integration with NH - before generating spirals, seed the RNG with the hash of the XML filename for this convo
-      // and add an option to specify the seed
-
-
-
-
-
-
-
-
-
-
-
-
+      //foreach (var s1 in spirals) s1.occupiedParentPoints.Clear();
 
       var index = -1;
       foreach (var s1 in spirals) 
@@ -227,7 +143,7 @@ public static class NomaiTextArcBuilder {
           force -= f2 / Mathf.Pow(f2.magnitude, 6);
 
           // account for spirals that get locked together (this happens when a mirrored spiral and non-mirrored spiral are close enough together that one spiral has its base to the left of the other's base and its center to the right of the other's center)
-          if (Vector2.Angle(f, f2) > 90) 
+          if (/*s1.parent == s2.parent && */ Vector2.Angle(f, f2) > 90) 
           {
             s1.transform.localScale = new Vector3(-s1.transform.localScale.x, 1, 1);
             force = Vector2.zero;
@@ -252,6 +168,8 @@ public static class NomaiTextArcBuilder {
         var scale = 0.75f;
         force = force.normalized * scale * (1 / (1 + Mathf.Exp(avg-force.magnitude)) - 1 / (1 + Mathf.Exp(avg))); // apply a sigmoid-ish smoothing operation, so only giant forces actually move the spirals
 
+        //forces.Add(force);
+
         //
         // apply the forces as we go to increase stability?
         //
@@ -266,7 +184,7 @@ public static class NomaiTextArcBuilder {
         for (var j = MIN_PARENT_POINT; j < MAX_PARENT_POINT; j++) 
         {
           // skip this point if it's already occupied by ANOTHER spiral (if it's occupied by this spiral, DO count it)
-          if (j != spiral._parentPointIndex && spiral.parent.occupiedParentPoints.Contains(j)) continue;
+          if (j != spiral.parentPointIndex && spiral.parent.occupiedParentPoints.Contains(j)) continue;
 
           var point = parentPoints[j];
           point = spiral.parent.transform.TransformPoint(point);
@@ -283,7 +201,7 @@ public static class NomaiTextArcBuilder {
         //
 
         var MAX_MOVE_DISTANCE = 2;
-        bestPointIndex = spiral._parentPointIndex + Mathf.Min(MAX_MOVE_DISTANCE, Mathf.Max(-MAX_MOVE_DISTANCE, bestPointIndex - spiral._parentPointIndex)); // minimize step size to help stability
+        bestPointIndex = spiral.parentPointIndex + Mathf.Min(MAX_MOVE_DISTANCE, Mathf.Max(-MAX_MOVE_DISTANCE, bestPointIndex - spiral.parentPointIndex)); // minimize step size to help stability
         
         //
         // actually move the spiral
@@ -291,13 +209,45 @@ public static class NomaiTextArcBuilder {
 
         SpiralManipulator.PlaceChildOnParentPoint(spiral.gameObject, spiral.parent.gameObject, bestPointIndex);
 
+        //
+        // finalize by updating the center
+        //
+        spiral.UpdateCenter();
         
         Debug.DrawRay(spiral.position, force);
       }
 
       //for (var i = 0; i < spirals.Count(); i++) 
       //{
-            
+      //  if (spirals[i].parent == null) continue;
+        
+      //  var spiral = spirals[i];
+      //  var parentPoints = spiral.parent.GetComponent<NomaiTextLine>().GetPoints();
+        
+      //  // pick the parent point that's closest to center+force, and move to there
+      //  var idealPoint = spiral.localPosition + forces[i];
+      //  var bestPointIndex = 0;
+      //  var bestPointDistance = 99999999f;
+      //  for (var j = MIN_PARENT_POINT; j < MAX_PARENT_POINT; j++) 
+      //  {
+      //    if (spiral.parent.occupiedParentPoints.Contains(j)) continue;
+
+      //    var dist = Vector2.Distance(parentPoints[j], idealPoint);
+      //    if (dist < bestPointDistance) {
+      //      bestPointDistance = dist;
+      //      bestPointIndex = j;
+      //    }
+      //  }
+        
+      //  var MAX_MOVE_DISTANCE = 1;
+      //  bestPointIndex = spiral.parentPointIndex + Mathf.Min(MAX_MOVE_DISTANCE, Mathf.Max(-MAX_MOVE_DISTANCE, bestPointIndex - spiral.parentPointIndex)); // minimize step size to help stability
+        
+      //  SpiralManipulator.PlaceChildOnParentPoint(spiral.gameObject, spiral.parent.gameObject, bestPointIndex);
+        
+      //  Debug.DrawRay(spiral.center, forces[i]);
+
+      //  // finalize by updating the center
+      //  spiral.UpdateCenter();
       //}
     }
   }
@@ -309,8 +259,21 @@ public static class NomaiTextArcBuilder {
     public List<SpiralManipulator> children = new List<SpiralManipulator>();
 
     public HashSet<int> occupiedParentPoints = new HashSet<int>();
-    public int _parentPointIndex = -1;
+    [SerializeField] private int _parentPointIndex = -1;
+    public int parentPointIndex 
+    {
+        get { return _parentPointIndex; }
+        set 
+        {
+            _parentPointIndex = value;
+            PlaceChildOnParentPoint(this.gameObject, this.parent.gameObject, value);
+        }
+    }
 
+    public bool addChild = false;
+    public bool updatePos = false;
+    public bool mirror = false;
+    
     public Vector2 localPosition {
         get { return new Vector2(this.transform.localPosition.x, this.transform.localPosition.y); }
     }
@@ -330,21 +293,47 @@ public static class NomaiTextArcBuilder {
     }
 
     public Vector2 center { get { return NomaiTextLine.GetWorldCenter(); } }
+    public Vector2 localCenter;
+    public void UpdateCenter() 
+    {
+        //if (localCenter == Vector2.zero) 
+        //{
+        //    var points = GetComponent<NomaiTextLine>().GetPoints();
+        //    localCenter = (points[0] + points[points.Length-1])/2f;
+        //}
 
-    public SpiralManipulator AddChild() {
+        //center = Quaternion.Euler(0, 0, transform.localEulerAngles.z) * localCenter + transform.localPosition;
+
+        //center = GetComponent<NomaiTextLine>().GetWorldCenter();
+    }
+
+    // hacky controls for the editor UI (please make a custom inspector instead)
+    private void Update() {
+      if (addChild) { 
+        addChild = false;
+        AddChild2();
+      }
+
+      if (updatePos) {
+        updatePos = false;
+        PlaceChildOnParentPoint(this.gameObject, this.parent.gameObject, _parentPointIndex);
+      }
+
+      if (mirror) {
+        mirror = false;
+        this.transform.localScale = new Vector3(-this.transform.localScale.x, 1, 1);
+        if (this.parent != null) PlaceChildOnParentPoint(this.gameObject, this.parent.gameObject, _parentPointIndex);
+      }
+    }
+
+    private void AddChild2() {
       var index = Random.Range(MIN_PARENT_POINT, MAX_PARENT_POINT);
       GameObject child = Place(this.transform.parent.gameObject);
       PlaceChildOnParentPoint(child, this.gameObject, index);
+      UpdateCenter();
 
       child.GetComponent<SpiralManipulator>().parent = this;
       this.children.Add(child.GetComponent<SpiralManipulator>());
-      return child.GetComponent<SpiralManipulator>();
-    }
-
-    public void Mirror() 
-    {       
-        this.transform.localScale = new Vector3(-this.transform.localScale.x, 1, 1);
-        if (this.parent != null) SpiralManipulator.PlaceChildOnParentPoint(this.gameObject, this.parent.gameObject, this._parentPointIndex);
     }
 
     public static int PlaceChildOnParentPoint(GameObject child, GameObject parent, int parentPointIndex, bool updateChildren=true) 
@@ -432,7 +421,7 @@ public static class NomaiTextArcBuilder {
       NomaiTextArcBuilder.i++;
 
       //
-      // cache important stuff
+      // casche important stuff
       //
 
       var _points = m.skeleton
@@ -451,6 +440,22 @@ public static class NomaiTextArcBuilder {
         normalAngles.Add(rot);
       }
       
+      // //
+      // // debug
+      // //
+
+      // for (int i = 0; i<m.numSkeletonPoints; i++) {
+      //   GameObject j = AddDebugShape.AddSphere(g.gameObject, 0.05f, Color.green);
+      //   j.transform.localPosition = _points[i];
+      // }
+      
+        //for (int i = 0; i<m.numSkeletonPoints; i++) {
+        //  GameObject s = AddDebugShape.AddStick(g.gameObject, Color.blue);
+        //  s.transform.localPosition = _points[i];
+        //  s.transform.localEulerAngles = new Vector3(0, 0, normalAngles[i]);
+        //  s.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+        //}
+
       //
       // set up NomaiTextArc stuff
       //
@@ -471,9 +476,23 @@ public static class NomaiTextArcBuilder {
       (typeof (NomaiTextLine)).InvokeMember("_center", BindingFlags.SetField | BindingFlags.Instance | BindingFlags.NonPublic, null, owNomaiTextLine, new object[] { _center });
       (typeof (NomaiTextLine)).InvokeMember("_radius", BindingFlags.SetField | BindingFlags.Instance | BindingFlags.NonPublic, null, owNomaiTextLine, new object[] { _radius });
       (typeof (NomaiTextLine)).InvokeMember("_active", BindingFlags.SetField | BindingFlags.Instance | BindingFlags.NonPublic, null, owNomaiTextLine, new object[] { _active });
+
+      //owNomaiTextLine._state = NomaiTextLine.VisualState.UNREAD;
+      //owNomaiTextLine._textLineLocation = NomaiText.Location.UNSPECIFIED;
+      //owNomaiTextLine._center = _points.Aggregate(Vector3.zero, (acc, point) => acc + point) / (float)_points.Count();
+      //owNomaiTextLine._radius = _points.Aggregate(Vector3.zero, (acc, point) => Mathf.Max(Vector3.Distance(_center, point), acc));
+      //owNomaiTextLine._active = true;
+
+
+
+      // // (float arcLen, float offsetX, float offsetY, float offsetAngle, bool mirror, float scale, float a, float b, float startS)
+      // GameObject p = AddDebugShape.AddSphere(g, 0.05f, Color.green);
+      // Vector3 start = m.getDrawnSpiralPointAndNormal(m.endS);
+      // p.transform.localPosition = new Vector3(start.x, 0, start.y);
     }
 
     public SpiralTextArc MakeChild() {
+      Debug.Log("MAKING CHILD");
       var s = new SpiralTextArc();
       s.m.startSOnParent = UnityEngine.Random.Range(50, 250);
       m.addChild(s.m);
