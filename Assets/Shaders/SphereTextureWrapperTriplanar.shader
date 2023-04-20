@@ -85,11 +85,11 @@
 		CGPROGRAM
 		#pragma surface surf Standard fullforwardshadows vertex:vert
 		#pragma target 3.0
-		#pragma shader_feature_local BASE_TILE
-		#pragma shader_feature_local RED_TILE
-		#pragma shader_feature_local GREEN_TILE
-		#pragma shader_feature_local BLUE_TILE 
-		#pragma shader_feature_local ALPHA_TILE
+		#pragma multi_compile _ BASE_TILE
+		#pragma multi_compile _ RED_TILE
+		#pragma multi_compile _ GREEN_TILE
+		#pragma multi_compile _ BLUE_TILE 
+		#pragma multi_compile _ ALPHA_TILE
 
 		#include "Triplanar.cginc"
 
