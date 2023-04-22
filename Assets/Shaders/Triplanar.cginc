@@ -1,11 +1,11 @@
 // Credit to Sebastian Lague https://github.com/SebLague/Solar-System
 
-float4 triplanar(float3 vertPos, float3 normal, float scale, sampler2D tex) {
+float4 triplanar(float3 vertPos, float3 normal, float size, sampler2D tex) {
 
 	// Calculate triplanar coordinates
-	float2 uvX = vertPos.zy * scale;
-	float2 uvY = vertPos.xz * scale;
-	float2 uvZ = vertPos.xy * scale;
+	float2 uvX = vertPos.zy / size;
+	float2 uvY = vertPos.xz / size;
+	float2 uvZ = vertPos.xy / size;
 
 	float4 colX = tex2D (tex, uvX);
 	float4 colY = tex2D (tex, uvY);
@@ -17,8 +17,8 @@ float4 triplanar(float3 vertPos, float3 normal, float scale, sampler2D tex) {
 	return colX * blendWeight.x + colY * blendWeight.y + colZ * blendWeight.z;
 }
 
-float4 triplanarOffset(float3 vertPos, float3 normal, float3 scale, sampler2D tex, float2 offset) {
-	float3 scaledPos = vertPos / scale;
+float4 triplanarOffset(float3 vertPos, float3 normal, float3 size, sampler2D tex, float2 offset) {
+	float3 scaledPos = vertPos / size;
 	float4 colX = tex2D (tex, scaledPos.zy + offset);
 	float4 colY = tex2D(tex, scaledPos.xz + offset);
 	float4 colZ = tex2D (tex,scaledPos.xy + offset);
@@ -51,7 +51,7 @@ float3 blend_rnm(float3 n1, float3 n2)
 // Sample normal map with triplanar coordinates
 // Returned normal will be in obj/world space (depending whether pos/normal are given in obj or world space)
 // Based on: medium.com/@bgolus/normal-mapping-for-a-triplanar-shader-10bf39dca05a
-float3 triplanarNormal(float3 vertPos, float3 normal, float3 scale, float2 offset, sampler2D normalMap) {
+float3 triplanarNormal(float3 vertPos, float3 normal, float3 size, float2 offset, sampler2D normalMap) {
 	float3 absNormal = abs(normal);
 
 	// Calculate triplanar blend
@@ -60,9 +60,9 @@ float3 triplanarNormal(float3 vertPos, float3 normal, float3 scale, float2 offse
 	blendWeight /= dot(blendWeight, 1);
 
 	// Calculate triplanar coordinates
-	float2 uvX = vertPos.zy * scale + offset;
-	float2 uvY = vertPos.xz * scale + offset;
-	float2 uvZ = vertPos.xy * scale + offset;
+	float2 uvX = vertPos.zy * size + offset;
+	float2 uvY = vertPos.xz * size + offset;
+	float2 uvZ = vertPos.xy * size + offset;
 
 	// Sample tangent space normal maps
 	// UnpackNormal puts values in range [-1, 1] (and accounts for DXT5nm compression)
@@ -91,12 +91,12 @@ float3 triplanarNormal(float3 vertPos, float3 normal, float3 scale, float2 offse
 	return outputNormal;
 }
 
-float3 triplanarNormalTangentSpace(float3 vertPos, float3 normal, float3 scale, float4 tangent, sampler2D normalMap) {
-	float3 textureNormal = triplanarNormal(vertPos, normal, scale, 0, normalMap);
+float3 triplanarNormalTangentSpace(float3 vertPos, float3 normal, float3 size, float4 tangent, sampler2D normalMap) {
+	float3 textureNormal = triplanarNormal(vertPos, normal, size, 0, normalMap);
 	return ObjectToTangentVector(tangent, normal, textureNormal);
 }
 
-float3 triplanarNormalTangentSpace(float3 vertPos, float3 normal, float3 scale, float2 offset, float4 tangent, sampler2D normalMap) {
-	float3 textureNormal = triplanarNormal(vertPos, normal, scale, offset, normalMap);
+float3 triplanarNormalTangentSpace(float3 vertPos, float3 normal, float3 size, float2 offset, float4 tangent, sampler2D normalMap) {
+	float3 textureNormal = triplanarNormal(vertPos, normal, size, offset, normalMap);
 	return ObjectToTangentVector(tangent, normal, textureNormal);
 }

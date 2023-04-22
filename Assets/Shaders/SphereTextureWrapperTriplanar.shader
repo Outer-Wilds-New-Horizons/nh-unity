@@ -23,7 +23,7 @@
 		[Toggle(BASE_TILE)] _BaseTile ("Active", Float) = 0
 		[Space]
 
-		_BaseTileScale ("Base Tile Scale", Float) = 1
+		_BaseTileSize ("Base Tile Size", Float) = 1
 		[NoScaleOffset] _BaseTileAlbedo ("Base Tile Albedo x2", 2D) = "grey" {}
 		[NoScaleOffset] _BaseTileSmoothnessMap ("Base Tile Smoothness Map", 2D) = "grey" {}
 		_BaseTileBumpStrength ("Base Tile Normal Strength", Float) = 1.0
@@ -35,7 +35,7 @@
 		[Toggle(RED_TILE)] _RedTile ("Active", Float) = 0
 		[Space]
 
-		_RedTileScale ("Red Tile Scale", Float) = 1
+		_RedTileSize ("Red Tile Size", Float) = 1
 		[NoScaleOffset] _RedTileAlbedo ("Red Tile Albedo x2", 2D) = "grey" {}
 		[NoScaleOffset] _RedTileSmoothnessMap ("Red Tile Smoothness Map", 2D) = "grey" {}
 		_RedTileBumpStrength ("Red Tile Normal Strength", Float) = 1.0
@@ -47,7 +47,7 @@
 		[Toggle(GREEN_TILE)] _GreenTile ("Active", Float) = 0
 		[Space]
 
-		_GreenTileScale ("Green Tile Scale", Float) = 1
+		_GreenTileSize ("Green Tile Size", Float) = 1
 		[NoScaleOffset] _GreenTileAlbedo ("Green Tile Albedo x2", 2D) = "grey" {}
 		[NoScaleOffset] _GreenTileSmoothnessMap ("Green Tile Smoothness Map", 2D) = "grey" {}
 		_GreenTileBumpStrength ("Green Tile Normal Strength", Float) = 1.0
@@ -58,7 +58,7 @@
 		[Toggle(BLUE_TILE)] _BlueTile ("Active", Float) = 0
 		[Space]
 
-		_BlueTileScale ("Blue Tile Scale", Float) = 1
+		_BlueTileSize ("Blue Tile Size", Float) = 1
 		[NoScaleOffset] _BlueTileAlbedo ("Blue Tile Albedo x2", 2D) = "grey" {}
 		[NoScaleOffset] _BlueTileSmoothnessMap ("Blue Tile Smoothness Map", 2D) = "grey" {}
 		_BlueTileBumpStrength ("Blue Tile Normal Strength", Float) = 1.0
@@ -70,7 +70,7 @@
 		[Toggle(ALPHA_TILE)] _AlphaTile ("Active", Float) = 0
 		[Space]
 
-		_AlphaTileScale ("Alpha Tile Scale", Float) = 1
+		_AlphaTileSize ("Alpha Tile Size", Float) = 1
 		[NoScaleOffset] _AlphaTileAlbedo ("Alpha Tile Albedo x2", 2D) = "grey" {}
 		[NoScaleOffset] _AlphaTileSmoothnessMap ("Alpha Tile Smoothness Map", 2D) = "grey" {}
 		_AlphaTileBumpStrength ("Alpha Tile Normal Strength", Float) = 1.0
@@ -105,35 +105,35 @@
 		UNITY_DECLARE_TEX2D_NOSAMPLER(_BlendMap);
 
 		bool _BaseTile;
-		float _BaseTileScale;
+		float _BaseTileSize;
 		sampler2D _BaseTileAlbedo;
 		sampler2D _BaseTileSmoothnessMap;
 		float _BaseTileBumpStrength;
 		sampler2D _BaseTileBumpMap;
 
 		bool _RedTile;
-		float _RedTileScale;
+		float _RedTileSize;
 		sampler2D _RedTileAlbedo;
 		sampler2D _RedTileSmoothnessMap;
 		float _RedTileBumpStrength;
 		sampler2D _RedTileBumpMap;
 
 		bool _GreenTile;
-		float _GreenTileScale;
+		float _GreenTileSize;
 		sampler2D _GreenTileAlbedo;
 		sampler2D _GreenTileSmoothnessMap;
 		float _GreenTileBumpStrength;
 		sampler2D _GreenTileBumpMap;
 
 		bool _BlueTile;
-		float _BlueTileScale;
+		float _BlueTileSize;
 		sampler2D _BlueTileAlbedo;
 		sampler2D _BlueTileSmoothnessMap;
 		float _BlueTileBumpStrength;
 		sampler2D _BlueTileBumpMap;
 
 		bool _AlphaTile;
-		float _AlphaTileScale;
+		float _AlphaTileSize;
 		UNITY_DECLARE_TEX2D_NOSAMPLER(_AlphaTileAlbedo);
 		UNITY_DECLARE_TEX2D_NOSAMPLER(_AlphaTileSmoothnessMap);
 		float _AlphaTileBumpStrength;
@@ -202,14 +202,14 @@
 
 			#if defined(RED_TILE)
 
-			tileAlbedo = triplanar(IN.vertPos, IN.normal, _RedTileScale, _RedTileAlbedo);
+			tileAlbedo = triplanar(IN.vertPos, IN.normal, _RedTileSize, _RedTileAlbedo);
 			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, blendMap.r);
 			
-			smoothnessTile = triplanar(IN.vertPos, IN.normal, _RedTileScale, _RedTileSmoothnessMap);
+			smoothnessTile = triplanar(IN.vertPos, IN.normal, _RedTileSize, _RedTileSmoothnessMap);
 			o.Smoothness *= lerp(1, smoothnessTile.a * 2, blendMap.r);
 			o.Metallic *= lerp(1, smoothnessTile.r * 2, blendMap.r);
 
-			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _RedTileScale, IN.tangent, _RedTileBumpMap);
+			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _RedTileSize, IN.tangent, _RedTileBumpMap);
 			triplanarNormal.z = 0;
 			o.Normal += triplanarNormal * _RedTileBumpStrength * blendMap.r;
 
@@ -217,14 +217,14 @@
 
 			#if defined(GREEN_TILE)
 
-			tileAlbedo = triplanar(IN.vertPos, IN.normal, _GreenTileScale, _GreenTileAlbedo);
+			tileAlbedo = triplanar(IN.vertPos, IN.normal, _GreenTileSize, _GreenTileAlbedo);
 			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, blendMap.g);
 			
-			smoothnessTile = triplanar(IN.vertPos, IN.normal, _GreenTileScale, _GreenTileSmoothnessMap);
+			smoothnessTile = triplanar(IN.vertPos, IN.normal, _GreenTileSize, _GreenTileSmoothnessMap);
 			o.Smoothness *= lerp(1, smoothnessTile.a * 2, blendMap.g);
 			o.Metallic *= lerp(1, smoothnessTile.r * 2, blendMap.g);
 
-			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _GreenTileScale, IN.tangent, _GreenTileBumpMap);
+			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _GreenTileSize, IN.tangent, _GreenTileBumpMap);
 			triplanarNormal.z = 0;
 			o.Normal += triplanarNormal * _GreenTileBumpStrength * blendMap.g;
 
@@ -232,14 +232,14 @@
 
 			#if defined(BLUE_TILE)
 
-			tileAlbedo = triplanar(IN.vertPos, IN.normal, _BlueTileScale, _BlueTileAlbedo);
+			tileAlbedo = triplanar(IN.vertPos, IN.normal, _BlueTileSize, _BlueTileAlbedo);
 			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, blendMap.b);
 			
-			smoothnessTile = triplanar(IN.vertPos, IN.normal, _BlueTileScale, _BlueTileSmoothnessMap);
+			smoothnessTile = triplanar(IN.vertPos, IN.normal, _BlueTileSize, _BlueTileSmoothnessMap);
 			o.Smoothness *= lerp(1, smoothnessTile.a * 2, blendMap.b);
 			o.Metallic *= lerp(1, smoothnessTile.r * 2, blendMap.b);
 
-			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _BlueTileScale, IN.tangent, _BlueTileBumpMap);
+			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _BlueTileSize, IN.tangent, _BlueTileBumpMap);
 			triplanarNormal.z = 0;
 			o.Normal += triplanarNormal * _BlueTileBumpStrength * blendMap.b;
 
@@ -248,9 +248,9 @@
 			#if defined(ALPHA_TILE)
 
 			// Do triplanar math out here to use macros, in order to save samplers
-			float2 uvX = IN.vertPos.zy * _AlphaTileScale;
-			float2 uvY = IN.vertPos.xz * _AlphaTileScale;
-			float2 uvZ = IN.vertPos.xy * _AlphaTileScale;
+			float2 uvX = IN.vertPos.zy / _AlphaTileSize;
+			float2 uvY = IN.vertPos.xz / _AlphaTileSize;
+			float2 uvZ = IN.vertPos.xy / _AlphaTileSize;
 			float4 colX = UNITY_SAMPLE_TEX2D_SAMPLER(_AlphaTileAlbedo, _MainTex, uvX);
 			float4 colY = UNITY_SAMPLE_TEX2D_SAMPLER(_AlphaTileAlbedo, _MainTex, uvY);
 			float4 colZ = UNITY_SAMPLE_TEX2D_SAMPLER(_AlphaTileAlbedo, _MainTex, uvZ);
@@ -260,9 +260,9 @@
 			tileAlbedo = colX * blendWeight.x + colY * blendWeight.y + colZ * blendWeight.z;
 			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, blendMap.a);
 			
-			//uvX = IN.vertPos.zy * _AlphaTileScale;
-			//uvY = IN.vertPos.xz * _AlphaTileScale;
-			//uvZ = IN.vertPos.xy * _AlphaTileScale;
+			//uvX = IN.vertPos.zy / _AlphaTileSize;
+			//uvY = IN.vertPos.xz / _AlphaTileSize;
+			//uvZ = IN.vertPos.xy / _AlphaTileSize;
 			colX = UNITY_SAMPLE_TEX2D_SAMPLER(_AlphaTileSmoothnessMap, _MainTex, uvX);
 			colY = UNITY_SAMPLE_TEX2D_SAMPLER(_AlphaTileSmoothnessMap, _MainTex, uvY);
 			colZ = UNITY_SAMPLE_TEX2D_SAMPLER(_AlphaTileSmoothnessMap, _MainTex, uvZ);
@@ -273,7 +273,7 @@
 			o.Smoothness *= lerp(1, smoothnessTile.a * 2, blendMap.a);
 			o.Metallic *= lerp(1, smoothnessTile.r * 2, blendMap.a);
 
-			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _AlphaTileScale, IN.tangent, _AlphaTileBumpMap);
+			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _AlphaTileSize, IN.tangent, _AlphaTileBumpMap);
 			triplanarNormal.z = 0;
 			o.Normal += triplanarNormal * _AlphaTileBumpStrength * blendMap.a;
 
@@ -288,14 +288,14 @@
 			if (_AlphaTile && blendMap.a > baseBlend) baseBlend = blendMap.a;
 			baseBlend = 1 - baseBlend;
 
-			tileAlbedo = triplanar(IN.vertPos, IN.normal, _BaseTileScale, _BaseTileAlbedo);
+			tileAlbedo = triplanar(IN.vertPos, IN.normal, _BaseTileSize, _BaseTileAlbedo);
 			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, baseBlend);
 			
-			smoothnessTile = triplanar(IN.vertPos, IN.normal, _BaseTileScale, _BaseTileSmoothnessMap);
+			smoothnessTile = triplanar(IN.vertPos, IN.normal, _BaseTileSize, _BaseTileSmoothnessMap);
 			o.Smoothness *= lerp(1, smoothnessTile.a * 2, baseBlend);
 			o.Metallic *= lerp(1, smoothnessTile.r * 2, baseBlend);
 
-			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _BaseTileScale, IN.tangent, _BaseTileBumpMap);
+			triplanarNormal = triplanarNormalTangentSpace(IN.vertPos, IN.normal, _BaseTileSize, IN.tangent, _BaseTileBumpMap);
 			triplanarNormal.z = 0;
 			o.Normal += triplanarNormal * _BaseTileBumpStrength * baseBlend;
 
