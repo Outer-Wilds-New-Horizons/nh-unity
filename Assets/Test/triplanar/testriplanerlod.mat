@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: testriplanerlod
-  m_Shader: {fileID: 4800000, guid: fff1a5d84692b004f9d829d3fac469d4, type: 3}
+  m_Shader: {fileID: 4800000, guid: efb583301e4f31945b75cf948262ca62, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
