@@ -282,7 +282,7 @@
 			baseBlend = 1 - baseBlend;
 
 			tileAlbedo = triplanar(IN.vertPos, IN.normal, _BaseTileScale, _BaseTileAlbedo);
-			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, baseBlend);
+			albedo *= lerp(1, tileAlbedo * 4, baseBlend);
 			
 			smoothnessTile = triplanar(IN.vertPos, IN.normal, _BaseTileScale, _BaseTileSmoothnessMap);
 			o.Smoothness *= lerp(1, smoothnessTile.a * 2, baseBlend);
