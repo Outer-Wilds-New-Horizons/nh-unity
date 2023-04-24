@@ -168,7 +168,7 @@
 			float frac_i = frac(i);
 			if(fwidth(i) > fwidth(frac_i) - 0.001) i = frac_i;
 
-			float4 albedo = UNITY_SAMPLE_TEX2D(_MainTex, float2(i, j));
+			o.Albedo = UNITY_SAMPLE_TEX2D(_MainTex, float2(i, j));
 
 			o.Emission = UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, float2(i, j)) * _EmissionColor;
 
@@ -196,7 +196,7 @@
 			#if defined(RED_TILE)
 
 			tileAlbedo = triplanar(IN.vertPos, IN.normal, _RedTileScale, _RedTileAlbedo);
-			albedo *= lerp(1, tileAlbedo * 4, blendMap.r);
+			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, blendMap.r);
 			
 			smoothnessTile = triplanar(IN.vertPos, IN.normal, _RedTileScale, _RedTileSmoothnessMap);
 			o.Smoothness *= lerp(1, smoothnessTile.a * 2, blendMap.r);
@@ -211,7 +211,7 @@
 			#if defined(GREEN_TILE)
 
 			tileAlbedo = triplanar(IN.vertPos, IN.normal, _GreenTileScale, _GreenTileAlbedo);
-			albedo *= lerp(1, tileAlbedo * 4, blendMap.g);
+			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, blendMap.g);
 			
 			smoothnessTile = triplanar(IN.vertPos, IN.normal, _GreenTileScale, _GreenTileSmoothnessMap);
 			o.Smoothness *= lerp(1, smoothnessTile.a * 2, blendMap.g);
@@ -226,7 +226,7 @@
 			#if defined(BLUE_TILE)
 
 			tileAlbedo = triplanar(IN.vertPos, IN.normal, _BlueTileScale, _BlueTileAlbedo);
-			albedo *= lerp(1, tileAlbedo * 4, blendMap.b);
+			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, blendMap.b);
 			
 			smoothnessTile = triplanar(IN.vertPos, IN.normal, _BlueTileScale, _BlueTileSmoothnessMap);
 			o.Smoothness *= lerp(1, smoothnessTile.a * 2, blendMap.b);
@@ -251,7 +251,7 @@
 			blendWeight /= dot(blendWeight, 1);
 
 			tileAlbedo = colX * blendWeight.x + colY * blendWeight.y + colZ * blendWeight.z;
-			albedo *= lerp(1, tileAlbedo * 4, blendMap.a);
+			o.Albedo.rgb *= lerp(1, tileAlbedo * 4, blendMap.a);
 			
 			//uvX = IN.vertPos.zy * _AlphaTileScale;
 			//uvY = IN.vertPos.xz * _AlphaTileScale;
@@ -293,8 +293,6 @@
 			o.Normal += triplanarNormal * _BaseTileBumpStrength * baseBlend;
 
 			#endif
-
-			o.Albedo = albedo;
 		}
 		ENDCG
 	}
